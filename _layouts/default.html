@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page.title | default: site.title }}</title>
+  <meta name="description" content="{{ page.description | default: site.description }}">
+  <link rel="canonical" href="{{ page.url | absolute_url }}">
+  {% seo %}
+  {% feed_meta %}
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Georgia, 'Times New Roman', serif; line-height: 1.8; color: #333; background: #fafafa; }
+    .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
+    header { background: #92400e; color: white; padding: 20px 0; }
+    header h1 { font-size: 1.8em; }
+    header h1 a { color: white; text-decoration: none; }
+    header p { color: #fbbf24; font-size: 0.9em; }
+    nav { margin-top: 10px; }
+    nav a { color: #fbbf24; text-decoration: none; margin-right: 15px; }
+    main { padding: 40px 0; min-height: 60vh; }
+    footer { background: #92400e; color: #fbbf24; padding: 20px 0; text-align: center; font-size: 0.85em; }
+    a { color: #b45309; }
+    h1, h2, h3 { color: #92400e; margin: 20px 0 10px; }
+    .post-list { list-style: none; }
+    .post-list li { margin-bottom: 30px; padding-bottom: 30px; border-bottom: 1px solid #e2e8f0; }
+    .post-list h2 { margin: 0; font-size: 1.4em; }
+    .post-list .post-meta { color: #718096; font-size: 0.85em; margin: 5px 0 10px; }
+    .post-content { margin-top: 20px; }
+    .post-content p { margin-bottom: 15px; }
+    .post-content h2 { margin-top: 30px; }
+    .post-content ul, .post-content ol { margin: 15px 0 15px 30px; }
+    .post-content li { margin-bottom: 8px; }
+    .post-meta { color: #718096; font-size: 0.9em; margin-bottom: 20px; }
+    /* AdSense placeholder */
+    .ad-slot { background: #f0f0f0; border: 1px dashed #ccc; padding: 20px; text-align: center; margin: 30px 0; color: #999; font-size: 0.85em; min-height: 90px; display: flex; align-items: center; justify-content: center; }
+  </style>
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-5L40K3SBQT"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-5L40K3SBQT');
+  </script>
+  <!-- Google AdSense - Replace with your AdSense code -->
+  <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1><a href="{{ '/' | relative_url }}">{{ site.title }}</a></h1>
+      <p>{{ site.description }}</p>
+    </div>
+  </header>
+  <main>
+    <div class="container">
+      {{ content }}
+    </div>
+  </main>
+  <footer>
+    <div class="container">
+      <p>&copy; {{ 'now' | date: '%Y' }} {{ site.title }}. All rights reserved.</p>
+      <p><a href="{{ '/feed.xml' | relative_url }}">RSS Feed</a> | <a href="{{ '/sitemap.xml' | relative_url }}">Sitemap</a></p>
+    </div>
+  </footer>
+</body>
+</html>

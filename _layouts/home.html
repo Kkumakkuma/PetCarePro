@@ -1,0 +1,17 @@
+---
+layout: default
+---
+
+<h1>Latest Articles</h1>
+
+<div class="ad-slot">Ad Space - Google AdSense will appear here after approval</div>
+
+<ul class="post-list">
+  {% for post in site.posts limit:20 %}
+  <li>
+    <h2><a href="{{ post.url | relative_url }}">{{ post.title }}</a></h2>
+    <p class="post-meta">{{ post.date | date: "%B %d, %Y" }} {% if post.categories %} | {{ post.categories | join: ", " }}{% endif %}</p>
+    <p>{{ post.excerpt | strip_html | truncatewords: 40 }}</p>
+  </li>
+  {% endfor %}
+</ul>
