@@ -32,3 +32,9 @@ exclude:
   - README.md
   - Gemfile
   - Gemfile.lock
+
+# Social / Pinterest
+social:
+  name: SmartTemplates
+  links:
+    - https://pinterest.com/smarttemplates

@@ -135,3 +135,13 @@ def create_post():
 if __name__ == '__main__':
     filepath, filename = create_post()
     print(f"Done! {filename}")
+
+if __name__ == '__main__':
+    # Every 5th post: generate a Gumroad promo post
+    from promo_post import should_write_promo, create_promo_post
+    if should_write_promo():
+        print("Generating promotional post...")
+        filepath, filename = create_promo_post()
+    else:
+        filepath, filename = create_post()
+    print(f"Done! Post generated: {filename}")
