@@ -1,144 +1,296 @@
-"""PetCarePro Auto Post Generator"""
-
-from openai import OpenAI
-import datetime, os, random, re
-
-TOPIC_POOLS = {
-    "dog_care": [
-        "How to Train Your Dog to Stop Barking",
-        "{number} Signs Your Dog Is Happy and Healthy",
-        "Best Dog Foods for {year}: Complete Guide",
-        "How to Stop Your Dog from Pulling on the Leash",
-        "How Often Should You Walk Your Dog",
-        "{number} Human Foods That Are Toxic to Dogs",
-        "How to Potty Train a Puppy Fast",
-    ],
-    "cat_care": [
-        "Why Does My Cat Meow So Much at Night",
-        "{number} Signs Your Cat Loves You",
-        "Best Cat Foods for Indoor Cats in {year}",
-        "How to Stop a Cat from Scratching Furniture",
-        "How Often Should You Take Your Cat to the Vet",
-        "{number} Things Your Cat Wants You to Know",
-        "Indoor vs Outdoor Cats: Pros and Cons",
-    ],
-    "pet_health": [
-        "{number} Signs Your Pet Needs to See a Vet Immediately",
-        "How to Keep Your Pet's Teeth Clean",
-        "Pet Allergies: Symptoms and Solutions",
-        "How to Protect Your Pet from Fleas and Ticks in {year}",
-        "Common Pet Illnesses and How to Prevent Them",
-        "How Much Exercise Does Your Pet Really Need",
-        "Pet Vaccination Guide: What You Need to Know in {year}",
-    ],
-    "pet_nutrition": [
-        "Raw Food Diet for Dogs: Is It Worth It",
-        "How to Choose the Best Pet Food in {year}",
-        "{number} Healthy Homemade Dog Treat Recipes",
-        "Grain-Free Pet Food: Good or Bad",
-        "How Much Should You Feed Your Dog Based on Weight",
-        "Best Supplements for Dogs and Cats in {year}",
-        "Wet Food vs Dry Food: Which Is Better for Your Pet",
-    ],
-    "training": [
-        "How to Teach Your Dog {number} Basic Commands",
-        "Crate Training Guide for Puppies",
-        "How to Socialize Your Dog with Other Dogs",
-        "Clicker Training for Dogs: Complete Beginner Guide",
-        "How to Stop Your Dog from Jumping on People",
-        "{number} Dog Training Mistakes Owners Make",
-        "How to Train Your Cat to Use a Litter Box",
-    ],
-    "pet_products": [
-        "Best Dog Beds for {year}: Top {number} Picks",
-        "Best Automatic Pet Feeders in {year}",
-        "Best Pet Cameras to Watch Your Pet While Away",
-        "Best Dog Harnesses Compared {year}",
-        "Best Cat Trees and Towers for {year}",
-        "Best Pet Insurance Companies in {year}",
-        "Best Interactive Dog Toys to Keep Them Busy",
-    ],
-}
-
-SYSTEM_PROMPT = """You are an expert pet care writer for a blog called PetCarePro.
-Write SEO-optimized, informative articles about pet care.
-
-Rules:
-- Friendly, warm tone like talking to a fellow pet lover
-- Short paragraphs (2-3 sentences max)
-- Practical, actionable advice
-- Use headers (##) to break up sections
-- Include bullet points and numbered lists
-- Write between 1200-1800 words
-- Naturally include the main keyword 3-5 times
-- Include specific product recommendations where relevant
-- End with a clear takeaway
-- Do NOT include AI disclaimers
-- Write as an experienced veterinary journalist
-- Do NOT use markdown title (# Title) - just start with the content
+"""
+PetCarePro Auto Post Generator v2
+- GPT generates unique long-tail keyword topics dynamically
+- used_topics.json prevents any duplicate content
+- High-CPC keywords + FAQ sections for Google featured snippets
+- Internal linking to boost SEO
 """
 
-def pick_topic():
-    year = datetime.datetime.now().year
-    number = random.choice([3, 5, 7, 10])
-    category = random.choice(list(TOPIC_POOLS.keys()))
-    title_template = random.choice(TOPIC_POOLS[category])
-    return title_template.format(year=year, number=number), category
+from openai import OpenAI
+import datetime
+import json
+import os
+import random
+import re
 
-def generate_post_content(title, category):
-    client = OpenAI()
-    response = client.chat.completions.create(
-        model="gpt-4o-mini", max_tokens=4000,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Write a blog post: \"{title}\"\nCategory: {category.replace('_', ' ')}\n1200-1800 words, ## headers, SEO-friendly."},
-        ],
-    )
-    return response.choices[0].message.content
+BLOG_NAME = "PetCarePro"
+BLOG_NICHE = "pet care"
+BLOG_DESCRIPTION = "Expert pet care tips for dogs, cats, and all your furry friends."
 
-def slugify(title):
-    slug = re.sub(r'[^a-z0-9\s-]', '', title.lower())
-    return re.sub(r'[\s-]+', '-', slug).strip('-')
+CATEGORIES = [
+    "dog-care",     "cat-care",     "pet-health",     "pet-nutrition",
+    "training",     "pet-products",     "grooming",     "puppy-care",
+    "kitten-care",     "pet-behavior",     "pet-insurance",     "exotic-pets",
+    "senior-pets",     "pet-safety",     "pet-travel",
+]
+
+SYSTEM_PROMPT = """You are an expert pet care writer for PetCarePro.
+You write SEO-optimized, highly informative articles that rank on Google.
+
+Writing rules:
+- Friendly, conversational but authoritative tone (like a trusted financial advisor friend)
+- Short paragraphs (2-3 sentences max)
+- Use ## for section headers (H2) and ### for subsections (H3)
+- Include bullet points and numbered lists
+- Write 1500-2200 words
+- Naturally weave the main keyword throughout (4-6 times)
+- Start with a hook that addresses the reader's pain point
+- Include specific numbers, percentages, and real examples
+- End with a clear actionable takeaway
+- Do NOT use markdown title (# Title) - start directly with content
+- Do NOT include AI disclaimers
+- Write as a certified veterinary technician sharing expertise
+
+SEO rules:
+- Include a "Frequently Asked Questions" section at the end with 3-4 Q&As using ### for each question
+- Use power words in subheadings (Ultimate, Essential, Proven, Complete)
+- Write in second person ("you") to engage readers
+- Include comparison elements (vs, compared to, better than)
+- Add year references where relevant for freshness
+"""
+
 
 def get_repo_root():
-    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.dirname(script_dir)
 
-def get_existing_titles():
-    posts_dir = os.path.join(get_repo_root(), '_posts')
-    titles = set()
+
+def load_used_topics():
+    """Load previously used topic slugs."""
+    filepath = os.path.join(get_repo_root(), "scripts", "used_topics.json")
+    if os.path.exists(filepath):
+        with open(filepath, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+
+def save_used_topics(topics):
+    filepath = os.path.join(get_repo_root(), "scripts", "used_topics.json")
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(topics, f, indent=2)
+
+
+def get_existing_slugs():
+    """Get all existing post slugs from _posts/."""
+    posts_dir = os.path.join(get_repo_root(), "_posts")
+    slugs = set()
     if os.path.exists(posts_dir):
-        for f in os.listdir(posts_dir):
-            if f.endswith('.md'): titles.add(f[11:-3])
+        for filename in os.listdir(posts_dir):
+            if filename.endswith(".md"):
+                # Remove date prefix and .md suffix
+                slug = re.sub(r"^\d{4}-\d{2}-\d{2}-", "", filename[:-3])
+                # Normalize: remove trailing random numbers
+                slug = re.sub(r"-\d{2,3}$", "", slug)
+                slugs.add(slug)
+    return slugs
+
+
+def get_recent_titles(limit=10):
+    """Get recent post titles for internal linking context."""
+    posts_dir = os.path.join(get_repo_root(), "_posts")
+    titles = []
+    if os.path.exists(posts_dir):
+        files = sorted(os.listdir(posts_dir), reverse=True)
+        for filename in files[:limit]:
+            if filename.endswith(".md"):
+                filepath = os.path.join(posts_dir, filename)
+                with open(filepath, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.startswith("title:"):
+                            title = line.split(":", 1)[1].strip().strip('"')
+                            titles.append(title)
+                            break
     return titles
 
-def create_post():
-    existing = get_existing_titles()
-    for _ in range(10):
-        title, category = pick_topic()
+
+def slugify(title):
+    slug = title.lower()
+    slug = re.sub(r"[^a-z0-9\s-]", "", slug)
+    slug = re.sub(r"[\s]+", "-", slug)
+    slug = re.sub(r"-+", "-", slug)
+    return slug.strip("-")
+
+
+def generate_unique_topic(used_topics, existing_slugs):
+    """Ask GPT to generate a unique, high-CPC long-tail keyword topic."""
+    client = OpenAI()
+    year = datetime.datetime.now().year
+    category = random.choice(CATEGORIES)
+
+    used_list = "\n".join(f"- {t}" for t in used_topics[-50:]) if used_topics else "(none yet)"
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        max_tokens=200,
+        temperature=1.0,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    f"You generate blog post titles for a {BLOG_NICHE} blog. "
+                    "Generate exactly ONE unique, SEO-optimized blog title.\n\n"
+                    "Requirements:\n"
+                    "- Long-tail keyword (5-12 words) that people actually search on Google\n"
+                    "- High commercial intent (topics where advertisers pay high CPC)\n"
+                    "- Specific and actionable (not generic)\n"
+                    "- Include numbers, year, or power words when natural\n"
+                    f"- Relevant to {year}\n"
+                    "- MUST be completely different from the used titles below\n"
+                    "- DO NOT just rephrase an existing title\n\n"
+                    "Reply with ONLY the title, nothing else."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Category: {category.replace('-', ' ')}\n\n"
+                    f"Already used titles (DO NOT repeat or rephrase these):\n{used_list}\n\n"
+                    "Generate one new unique title:"
+                ),
+            },
+        ],
+    )
+
+    title = response.choices[0].message.content.strip().strip('"').strip("'")
+    slug = slugify(title)
+
+    # Verify it's actually unique
+    norm_slug = re.sub(r"-\d{2,3}$", "", slug)
+    if norm_slug in existing_slugs or norm_slug in [slugify(t) for t in used_topics[-100:]]:
+        # Retry once with stronger instruction
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            max_tokens=200,
+            temperature=1.2,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        f"Generate a COMPLETELY NEW and UNIQUE {BLOG_NICHE} blog title. "
+                        f"Category: {category.replace('-', ' ')}. "
+                        f"This MUST NOT overlap with any existing content. "
+                        f"Think of a specific subtopic or angle that hasn't been covered. "
+                        f"Use long-tail keywords (6-12 words). Year: {year}. "
+                        "Reply with ONLY the title."
+                    ),
+                },
+                {"role": "user", "content": "Generate:"},
+            ],
+        )
+        title = response.choices[0].message.content.strip().strip('"').strip("'")
         slug = slugify(title)
-        if slug not in existing: break
-    else:
-        title, category = pick_topic()
-        slug = slugify(title) + f"-{random.randint(100,999)}"
-    print(f"Generating: {title}")
-    content = generate_post_content(title, category)
+
+    return title, category, slug
+
+
+def generate_post_content(title, category, recent_titles):
+    """Generate high-quality blog post with FAQ and internal linking."""
+    client = OpenAI()
+
+    internal_links_hint = ""
+    if recent_titles:
+        links = "\n".join(f"- {t}" for t in recent_titles[:5])
+        internal_links_hint = (
+            f"\n\nFor internal linking, naturally reference 1-2 of these related articles "
+            f"where relevant (use the exact title in a mention like "
+            f"'as we covered in [Article Title]'):\n{links}"
+        )
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        max_tokens=5000,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": (
+                    f'Write a comprehensive blog post titled: "{title}"\n\n'
+                    f"Category: {category.replace('-', ' ')}\n\n"
+                    "Structure:\n"
+                    "1. Hook intro (address the reader's problem)\n"
+                    "2. 4-6 detailed sections with ## headers\n"
+                    "3. Practical tips with specific examples\n"
+                    "4. FAQ section (## Frequently Asked Questions) with 3-4 ### questions\n"
+                    "5. Brief conclusion with call-to-action\n\n"
+                    "Write 1500-2200 words. Make it genuinely helpful and unique."
+                    f"{internal_links_hint}"
+                ),
+            },
+        ],
+    )
+
+    return response.choices[0].message.content
+
+
+def generate_meta_description(title):
+    """Generate a unique, compelling meta description."""
+    client = OpenAI()
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        max_tokens=100,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "Write a compelling meta description for a blog post. "
+                    "150-160 characters max. Include the main keyword. "
+                    "Add a call-to-action. Reply with ONLY the description."
+                ),
+            },
+            {"role": "user", "content": f"Title: {title}"},
+        ],
+    )
+    desc = response.choices[0].message.content.strip().strip('"')
+    return desc[:160]
+
+
+def create_post():
+    """Generate and save a new unique blog post."""
+    used_topics = load_used_topics()
+    existing_slugs = get_existing_slugs()
+    recent_titles = get_recent_titles(10)
+
+    title, category, slug = generate_unique_topic(used_topics, existing_slugs)
+    print(f"Generating post: {title}")
+    print(f"Category: {category}")
+
+    content = generate_post_content(title, category, recent_titles)
+    description = generate_meta_description(title)
+
     today = datetime.datetime.now()
-    filename = f"{today.strftime('%Y-%m-%d')}-{slug}.md"
-    posts_dir = os.path.join(get_repo_root(), '_posts')
+    date_str = today.strftime("%Y-%m-%d")
+    filename = f"{date_str}-{slug}.md"
+
+    posts_dir = os.path.join(get_repo_root(), "_posts")
     os.makedirs(posts_dir, exist_ok=True)
     filepath = os.path.join(posts_dir, filename)
-    with open(filepath, 'w', encoding='utf-8') as f:
-        f.write(f"""---\nlayout: post\ntitle: \"{title}\"\ndate: {today.strftime('%Y-%m-%d %H:%M:%S')} +0000\ncategories: [{category.replace('_','-')}]\ndescription: \"{title} - Expert pet care tips and advice.\"\n---\n\n{content}\n""")
-    print(f"Saved: {filepath}")
+
+    frontmatter = f"""---
+layout: post
+title: "{title}"
+date: {today.strftime('%Y-%m-%d %H:%M:%S')} +0000
+categories: [{category}]
+description: "{description}"
+tags: [{category}, {BLOG_NICHE.replace(' ', '-')}, {today.year}]
+---
+
+{content}
+"""
+
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(frontmatter)
+
+    # Track used topic
+    used_topics.append(title)
+    save_used_topics(used_topics)
+
+    print(f"Post saved: {filepath}")
     return filepath, filename
 
-if __name__ == '__main__':
-    filepath, filename = create_post()
-    print(f"Done! {filename}")
 
-if __name__ == '__main__':
-    # Every 5th post: generate a Gumroad promo post
+if __name__ == "__main__":
     from promo_post import should_write_promo, create_promo_post
+
     if should_write_promo():
         print("Generating promotional post...")
         filepath, filename = create_promo_post()

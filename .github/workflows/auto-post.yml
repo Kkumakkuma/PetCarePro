@@ -30,7 +30,7 @@ jobs:
         run: |
           git config user.name "PetCarePro Bot"
           git config user.email "bot@petcarepro.com"
-          git add _posts/
+          git add _posts/ scripts/used_topics.json scripts/used_promo_titles.json
           git diff --staged --quiet || git commit -m "Auto-publish new article $(date +%Y-%m-%d-%H%M)"
           git push
       - name: Setup Ruby
