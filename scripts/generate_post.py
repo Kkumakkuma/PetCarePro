@@ -12,6 +12,20 @@ import json
 import os
 import random
 import re
+import time
+
+
+def _openai_retry(call, attempts=3, backoff=2.0):
+    """OpenAI 일시 오류(rate limit, 5xx, 네트워크)에 재시도. 마지막 실패는 예외 그대로."""
+    last = None
+    for i in range(attempts):
+        try:
+            return call()
+        except Exception as e:
+            last = e
+            if i < attempts - 1:
+                time.sleep(backoff ** i)
+    raise last
 
 BLOG_NAME = "PetCarePro"
 BLOG_NICHE = "pet care"
@@ -111,81 +125,71 @@ def slugify(title):
     return slug.strip("-")
 
 
-def generate_unique_topic(used_topics, existing_slugs):
-    """Ask GPT to generate a unique, high-CPC long-tail keyword topic."""
+def generate_unique_topic(used_topics, existing_slugs, max_attempts=5):
+    """Ask GPT to generate a unique, high-CPC long-tail keyword topic. 재시도 강화."""
     client = OpenAI()
     year = datetime.datetime.now().year
     category = random.choice(CATEGORIES)
+    used_set = set(slugify(t) for t in used_topics[-200:]) | existing_slugs
 
     used_list = "\n".join(f"- {t}" for t in used_topics[-50:]) if used_topics else "(none yet)"
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        max_tokens=200,
-        temperature=1.0,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    f"You generate blog post titles for a {BLOG_NICHE} blog. "
-                    "Generate exactly ONE unique, SEO-optimized blog title.\n\n"
-                    "Requirements:\n"
-                    "- Long-tail keyword (5-12 words) that people actually search on Google\n"
-                    "- High commercial intent (topics where advertisers pay high CPC)\n"
-                    "- Specific and actionable (not generic)\n"
-                    "- Include numbers, year, or power words when natural\n"
-                    f"- Relevant to {year}\n"
-                    "- MUST be completely different from the used titles below\n"
-                    "- DO NOT just rephrase an existing title\n\n"
-                    "Reply with ONLY the title, nothing else."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Category: {category.replace('-', ' ')}\n\n"
-                    f"Already used titles (DO NOT repeat or rephrase these):\n{used_list}\n\n"
-                    "Generate one new unique title:"
-                ),
-            },
-        ],
-    )
-
-    title = response.choices[0].message.content.strip().strip('"').strip("'")
-    slug = slugify(title)
-
-    # Verify it's actually unique
-    norm_slug = re.sub(r"-\d{2,3}$", "", slug)
-    if norm_slug in existing_slugs or norm_slug in [slugify(t) for t in used_topics[-100:]]:
-        # Retry once with stronger instruction
-        response = client.chat.completions.create(
+    title = ""
+    slug = ""
+    for attempt in range(max_attempts):
+        temperature = 1.0 + 0.1 * attempt   # 점점 다양성 ↑
+        prompt_strength = "" if attempt == 0 else f" (PREVIOUS ATTEMPT WAS DUPLICATE — try a totally different angle. Attempt #{attempt + 1})"
+        response = _openai_retry(lambda: client.chat.completions.create(
             model="gpt-4o-mini",
             max_tokens=200,
-            temperature=1.2,
+            temperature=temperature,
             messages=[
                 {
                     "role": "system",
                     "content": (
-                        f"Generate a COMPLETELY NEW and UNIQUE {BLOG_NICHE} blog title. "
-                        f"Category: {category.replace('-', ' ')}. "
-                        f"This MUST NOT overlap with any existing content. "
-                        f"Think of a specific subtopic or angle that hasn't been covered. "
-                        f"Use long-tail keywords (6-12 words). Year: {year}. "
-                        "Reply with ONLY the title."
+                        f"You generate blog post titles for a {BLOG_NICHE} blog. "
+                        "Generate exactly ONE unique, SEO-optimized blog title.\n\n"
+                        "Requirements:\n"
+                        "- Long-tail keyword (5-12 words) that people actually search on Google\n"
+                        "- High commercial intent (topics where advertisers pay high CPC)\n"
+                        "- Specific and actionable (not generic)\n"
+                        "- Include numbers, year, or power words when natural\n"
+                        f"- Relevant to {year}\n"
+                        "- MUST be completely different from the used titles below\n"
+                        "- DO NOT just rephrase an existing title\n\n"
+                        f"{prompt_strength}\n"
+                        "Reply with ONLY the title, nothing else."
                     ),
                 },
-                {"role": "user", "content": "Generate:"},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Category: {category.replace('-', ' ')}\n\n"
+                        f"Already used titles (DO NOT repeat or rephrase these):\n{used_list}\n\n"
+                        "Generate one new unique title:"
+                    ),
+                },
             ],
-        )
+        ))
         title = response.choices[0].message.content.strip().strip('"').strip("'")
         slug = slugify(title)
+        norm_slug = re.sub(r"-\d{2,3}$", "", slug)
+        if norm_slug not in used_set:
+            break
+        # 다른 카테고리로도 한 번 시도
+        if attempt == 2:
+            category = random.choice(CATEGORIES)
 
     return title, category, slug
 
 
 def generate_post_content(title, category, recent_titles):
-    """Generate high-quality blog post with FAQ and internal linking."""
+    """Generate high-quality blog post with FAQ and internal linking. (retry 3x)"""
     client = OpenAI()
+    return _generate_post_content_inner(client, title, category, recent_titles)
+
+
+def _generate_post_content_inner(client, title, category, recent_titles):
 
     internal_links_hint = ""
     if recent_titles:
@@ -196,7 +200,7 @@ def generate_post_content(title, category, recent_titles):
             f"'as we covered in [Article Title]'):\n{links}"
         )
 
-    response = client.chat.completions.create(
+    response = _openai_retry(lambda: client.chat.completions.create(
         model="gpt-4o-mini",
         max_tokens=5000,
         messages=[
@@ -217,7 +221,7 @@ def generate_post_content(title, category, recent_titles):
                 ),
             },
         ],
-    )
+    ))
 
     return response.choices[0].message.content
 
@@ -259,11 +263,18 @@ def create_post():
 
     today = datetime.datetime.now()
     date_str = today.strftime("%Y-%m-%d")
-    filename = f"{date_str}-{slug}.md"
-
     posts_dir = os.path.join(get_repo_root(), "_posts")
     os.makedirs(posts_dir, exist_ok=True)
+
+    # 파일명 충돌 방지 — 같은 날 같은 slug 면 -2, -3, ... 자동 접미사
+    filename = f"{date_str}-{slug}.md"
     filepath = os.path.join(posts_dir, filename)
+    suffix = 2
+    while os.path.exists(filepath):
+        filename = f"{date_str}-{slug}-{suffix}.md"
+        filepath = os.path.join(posts_dir, filename)
+        suffix += 1
+        if suffix > 99: break  # 안전장치
 
     frontmatter = f"""---
 layout: post
