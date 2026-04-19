@@ -1,4 +1,4 @@
 ---
 layout: home
-title: PetCarePro - Expert Tips for Happy, Healthy Pets
+title: "PetCarePro &mdash; Pet care advice from a long-time dog and cat owner."
 ---
