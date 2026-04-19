@@ -33,14 +33,21 @@ Writing rules:
 - Short paragraphs (2-3 sentences max)
 - Use ## for section headers (H2) and ### for subsections (H3)
 - Include bullet points and numbered lists
-- Write 1500-2200 words
-- Naturally weave the main keyword throughout (4-6 times)
+- Write 2000-2800 words (deep content ranks better and holds reader longer for ad views)
+- Naturally weave the main keyword throughout (5-8 times)
 - Start with a hook that addresses the reader's pain point
-- Include specific numbers, percentages, and real examples
+- Include specific numbers, percentages, real examples, and real product / brand names where relevant
 - End with a clear actionable takeaway
 - Do NOT use markdown title (# Title) - start directly with content
 - Do NOT include AI disclaimers
 - Write as a certified veterinary technician sharing expertise
+
+Commercial intent (critical - this is how the blog earns ad revenue):
+- When the topic involves buying, choosing, or comparing products/services, mention REAL brands/products by name (3-8 mentions) and compare them honestly.
+- Include a "Prices and where to look" style paragraph with realistic price ranges in USD.
+- Include affiliate-friendly phrasing ("If you want to check current prices...") without inventing fake URLs.
+- Include at least one "worth it?" judgment that addresses the reader's likely purchase hesitation.
+- These buyer-intent signals drive higher CPC ad matching and therefore higher revenue per page.
 
 FIRST-PERSON EXPERIENCE (critical for AdSense / Google E-E-A-T):
 - Use first-person voice ("I tested", "In my experience", "I spent", "When I tried") at least 3 times.
@@ -166,19 +173,28 @@ def generate_unique_topic(used_topics, existing_slugs, max_attempts=5):
                 {
                     "role": "system",
                     "content": (
-                        f"You generate blog post titles for a {BLOG_NICHE} blog. "
-                        "Generate exactly ONE unique, SEO-optimized blog title.\n\n"
-                        "Requirements:\n"
-                        "- Long-tail keyword (5-12 words) that people actually search on Google\n"
-                        "- High commercial intent (topics where advertisers pay high CPC)\n"
-                        "- Specific and actionable (not generic)\n"
-                        "- Include numbers, year, or power words when natural\n"
+                        f"You generate blog post titles for a {BLOG_NICHE} blog.\n"
+                        "TARGET: HIGH-CPC buyer-intent long-tail keywords that drive ad revenue.\n\n"
+                        "Preferred title patterns (pick one that fits):\n"
+                        "- 'Best [product/service] for [specific use case] in {YEAR}'\n"
+                        "- '[Brand A] vs [Brand B]: Which Is Better for [use case] in {YEAR}?'\n"
+                        "- 'Is [product/service] Worth It in {YEAR}? My [N]-Month Review'\n"
+                        "- 'How Much Does [thing] Cost in {YEAR}? Real Numbers From My Experience'\n"
+                        "- '[N] Cheapest [things] That Actually [benefit] in {YEAR}'\n"
+                        "- 'I Tried [product] for [N] [days/weeks] - Here Is What Happened'\n"
+                        "- '[Tool] Review {YEAR}: Pros, Cons, and Cheaper Alternatives'\n"
+                        "- 'Top [N] [service type] for [specific audience] in {YEAR} (Ranked)'\n\n"
+                        "Rules:\n"
+                        "- Long-tail (5-12 words) real Google search query\n"
+                        "- Buyer intent > informational intent (people about to spend money)\n"
+                        "- Mention specific product/brand/price/number when natural (drives CPC)\n"
                         f"- Relevant to {year}\n"
                         "- MUST be completely different from the used titles below\n"
-                        "- DO NOT just rephrase an existing title\n\n"
+                        "- DO NOT rephrase an existing title\n"
+                        "- Avoid pure listicles without buyer intent (e.g., '10 tips for X' without a product angle)\n\n"
                         f"{prompt_strength}\n"
                         "Reply with ONLY the title, nothing else."
-                    ),
+                    ).replace("{YEAR}", str(year)),
                 },
                 {
                     "role": "user",
@@ -227,19 +243,26 @@ def _generate_post_content_inner(client, title, category, recent_titles):
             {
                 "role": "user",
                 "content": (
-                    f'Write a comprehensive blog post titled: "{title}"\n\n'
+                    f'Write a comprehensive, ad-revenue-optimized blog post titled: "{title}"\n\n'
                     f"Category: {category.replace('-', ' ')}\n\n"
                     "Structure (follow ALL):\n"
-                    "1. First-person hook intro (2-3 sentences, use I/me/my)\n"
-                    "2. 4-6 H2 sections; weave in first-person anecdotes and real numbers\n"
-                    "3. ONE Markdown comparison table with 3+ rows and 3+ columns of real values\n"
-                    "4. A '## What Most Guides Get Wrong' section with 3 contrarian insights\n"
-                    "5. A '## Frequently Asked Questions' section with 3-4 ### Q&A pairs\n"
-                    "6. Conclusion with clear next step\n\n"
-                    "First-person voice is mandatory: use 'I', 'my', 'in my experience' at least 3 times.\n"
+                    "1. First-person hook intro (2-3 sentences, use I/me/my; mention a specific dollar amount or month)\n"
+                    "2. 5-7 H2 sections; each section with 2-3 H3 subsections where useful\n"
+                    "3. ONE Markdown comparison table with 4+ rows and 3+ columns (real values or realistic ranges)\n"
+                    "4. At least 2 H2 sections that mention specific REAL brands/products/services by name and compare them honestly\n"
+                    "5. A '## What Most Guides Get Wrong' section with 3 contrarian insights\n"
+                    "6. A '## Is It Worth It?' or '## My Verdict' section addressing the reader's purchase hesitation\n"
+                    "7. A '## Frequently Asked Questions' section with 4-5 ### Q&A pairs (include 1-2 price-related questions)\n"
+                    "8. Conclusion with a clear next step the reader can take today\n\n"
+                    "Commercial intent is the priority (this blog monetizes via Google AdSense; buyer-intent pages earn 3-10x more per view):\n"
+                    "- Mention real products, brands, or services by name. Never invent fake brand names.\n"
+                    "- Include realistic US dollar price ranges where relevant.\n"
+                    "- Use buyer-intent phrases: 'is it worth it', 'cheaper alternative', 'best for X budget', 'before you buy'.\n"
+                    "- Do NOT fabricate URLs. Say 'check current price on the brand's official site' instead.\n\n"
+                    "First-person voice is mandatory: use 'I', 'my', 'in my experience' at least 4 times.\n"
                     "Author persona: Kkuma Park, an indie writer in Seoul who writes from personal testing.\n"
                     "Avoid generic 'many people' claims. Use specific numbers, months, dollar amounts.\n\n"
-                    "Write 1600-2200 words. Make it feel like a blog post a real human wrote, not an AI summary."
+                    "Write 2000-2800 words. Longer is better for ranking and total ad impressions, but only if every paragraph pulls weight."
                     f"{internal_links_hint}"
                 ),
             },
