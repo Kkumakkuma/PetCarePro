@@ -14,19 +14,6 @@ import random
 import re
 import time
 
-
-def _openai_retry(call, attempts=3, backoff=2.0):
-    """OpenAI 일시 오류(rate limit, 5xx, 네트워크)에 재시도. 마지막 실패는 예외 그대로."""
-    last = None
-    for i in range(attempts):
-        try:
-            return call()
-        except Exception as e:
-            last = e
-            if i < attempts - 1:
-                time.sleep(backoff ** i)
-    raise last
-
 BLOG_NAME = "PetCarePro"
 BLOG_NICHE = "pet care"
 BLOG_DESCRIPTION = "Expert pet care tips for dogs, cats, and all your furry friends."
@@ -62,6 +49,19 @@ SEO rules:
 - Include comparison elements (vs, compared to, better than)
 - Add year references where relevant for freshness
 """
+
+
+def _openai_retry(call, attempts=3, backoff=2.0):
+    """OpenAI 일시 오류(rate limit, 5xx, 네트워크)에 재시도. 마지막 실패는 예외 그대로."""
+    last = None
+    for i in range(attempts):
+        try:
+            return call()
+        except Exception as e:
+            last = e
+            if i < attempts - 1:
+                time.sleep(backoff ** i)
+    raise last
 
 
 def get_repo_root():

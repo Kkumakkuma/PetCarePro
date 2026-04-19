@@ -57,10 +57,19 @@
     .hero { background: linear-gradient(135deg, #1a365d 0%, #2563eb 100%); color: white; padding: 40px 28px; border-radius: 14px; margin-bottom: 36px; }
     .hero h1 { color: white; margin: 0 0 10px; font-size: 1.8em; }
     .hero p { color: #dce5ff; margin: 0; font-size: 1.02em; }
+    .other-blogs { padding: 14px 0 18px; border-bottom: 1px solid rgba(255,255,255,0.12); margin-bottom: 16px; }
+    .other-blogs-title { color: #fff; font-weight: 600; margin-bottom: 10px; font-size: 0.95em; }
+    .other-blogs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 4px 16px; text-align: left; max-width: 780px; margin: 0 auto 12px; }
+    .other-blogs-grid a { color: #cfe0ff; text-decoration: none; font-size: 0.88em; padding: 3px 0; display: block; }
+    .other-blogs-grid a:hover { color: #fff; text-decoration: underline; }
+    .hub-link { margin: 4px 0 0; font-size: 0.9em; }
+    .hub-link a { color: #fff; font-weight: 600; text-decoration: none; }
+    .hub-link a:hover { text-decoration: underline; }
     @media (max-width: 600px) {
       header h1 { font-size: 1.3em; }
       .hero { padding: 28px 20px; }
       .hero h1 { font-size: 1.4em; }
+      nav.main-nav a[href="/"][style*="margin-left"] { margin-left: 0 !important; }
     }
   </style>
   <!-- Google Analytics -->
@@ -88,6 +97,7 @@
         <a href="{{ '/privacy-policy/' | relative_url }}">Privacy</a>
         <a href="{{ '/disclaimer/' | relative_url }}">Disclaimer</a>
         <a href="{{ '/terms/' | relative_url }}">Terms</a>
+        <a href="/" style="margin-left:auto; font-weight:600; color:#fff;">&uarr; All Blogs</a>
       </nav>
     </div>
   </header>
@@ -98,6 +108,22 @@
   </main>
   <footer>
     <div class="container">
+      <div class="other-blogs">
+        <p class="other-blogs-title">Explore my other blogs</p>
+        <div class="other-blogs-grid">
+          <a href="/SmartMoneyDaily/">SmartMoneyDaily &mdash; Finance</a>
+          <a href="/HealthyLifeHub/">HealthyLifeHub &mdash; Health</a>
+          <a href="/FitnessDailyTips/">FitnessDailyTips &mdash; Fitness</a>
+          <a href="/TechSimplified/">TechSimplified &mdash; Tech</a>
+          <a href="/CookingMadeEasy/">CookingMadeEasy &mdash; Cooking</a>
+          <a href="/HomeFixGuide/">HomeFixGuide &mdash; DIY Home</a>
+          <a href="/ParentingSimple/">ParentingSimple &mdash; Parenting</a>
+          <a href="/PetCarePro/">PetCarePro &mdash; Pets</a>
+          <a href="/TravelBudgetPro/">TravelBudgetPro &mdash; Travel</a>
+          <a href="/CarBuyingGuide/">CarBuyingGuide &mdash; Cars</a>
+        </div>
+        <p class="hub-link"><a href="/">&uarr; Return to main hub</a></p>
+      </div>
       <p>&copy; {{ 'now' | date: '%Y' }} {{ site.title }}. Written by Kkuma Park. All rights reserved.</p>
       <nav>
         <a href="{{ '/about/' | relative_url }}">About</a>
@@ -110,6 +136,5 @@
       </nav>
     </div>
   </footer>
-  <script async defer src="https://assets.pinterest.com/js/pinit.js"></script>
 </body>
 </html>
