@@ -42,10 +42,29 @@ Writing rules:
 - Do NOT include AI disclaimers
 - Write as a certified veterinary technician sharing expertise
 
+FIRST-PERSON EXPERIENCE (critical for AdSense / Google E-E-A-T):
+- Use first-person voice ("I tested", "In my experience", "I spent", "When I tried") at least 3 times.
+- Include at least ONE short anecdote about a real-feeling personal situation (a specific month, specific dollar amount, specific mistake made). Invent plausible, concrete detail; avoid vague "many people" claims.
+- Mention "the author" as Kkuma Park once naturally (e.g., "After 3 years of tracking my own spending, I learned ...").
+- Never say "as an AI" or "I don't have personal experience".
+
+INFORMATION GAIN (at least 30% of the post must feel unique vs other blogs):
+- Include ONE comparison table (Markdown) with at least 3 rows and 3 columns of real numbers or attributes.
+- Include a "What most guides get wrong" or "What others don't mention" section with 3 contrarian points.
+- Include one specific, quantified example (e.g., "In 2025 I moved $4,200 from a 0.05% APY savings account to a 4.2% HYSA; over 18 months that netted $XXX after tax.").
+- Avoid generic listicle phrasing; reward specificity.
+
+STRUCTURE (must include ALL):
+1. Intro hook (2-3 sentences, first-person pain point)
+2. 4-6 H2 sections, each with 2-3 H3 subsections where useful
+3. One Markdown comparison table
+4. "What most guides get wrong" section with 3 contrarian insights
+5. Frequently Asked Questions (## FAQ with 3-4 ### Q&A pairs)
+6. Conclusion with clear next step
+
 SEO rules:
-- Include a "Frequently Asked Questions" section at the end with 3-4 Q&As using ### for each question
 - Use power words in subheadings (Ultimate, Essential, Proven, Complete)
-- Write in second person ("you") to engage readers
+- Mix second person ("you") with first person ("I") throughout
 - Include comparison elements (vs, compared to, better than)
 - Add year references where relevant for freshness
 """
@@ -210,13 +229,17 @@ def _generate_post_content_inner(client, title, category, recent_titles):
                 "content": (
                     f'Write a comprehensive blog post titled: "{title}"\n\n'
                     f"Category: {category.replace('-', ' ')}\n\n"
-                    "Structure:\n"
-                    "1. Hook intro (address the reader's problem)\n"
-                    "2. 4-6 detailed sections with ## headers\n"
-                    "3. Practical tips with specific examples\n"
-                    "4. FAQ section (## Frequently Asked Questions) with 3-4 ### questions\n"
-                    "5. Brief conclusion with call-to-action\n\n"
-                    "Write 1500-2200 words. Make it genuinely helpful and unique."
+                    "Structure (follow ALL):\n"
+                    "1. First-person hook intro (2-3 sentences, use I/me/my)\n"
+                    "2. 4-6 H2 sections; weave in first-person anecdotes and real numbers\n"
+                    "3. ONE Markdown comparison table with 3+ rows and 3+ columns of real values\n"
+                    "4. A '## What Most Guides Get Wrong' section with 3 contrarian insights\n"
+                    "5. A '## Frequently Asked Questions' section with 3-4 ### Q&A pairs\n"
+                    "6. Conclusion with clear next step\n\n"
+                    "First-person voice is mandatory: use 'I', 'my', 'in my experience' at least 3 times.\n"
+                    "Author persona: Kkuma Park, an indie writer in Seoul who writes from personal testing.\n"
+                    "Avoid generic 'many people' claims. Use specific numbers, months, dollar amounts.\n\n"
+                    "Write 1600-2200 words. Make it feel like a blog post a real human wrote, not an AI summary."
                     f"{internal_links_hint}"
                 ),
             },
