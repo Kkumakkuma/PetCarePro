@@ -91,14 +91,18 @@ def main():
     problems = []
     summary_ok = []
     for r in results:
-        # 24시간 합 (오늘 + 어제) — KST 18시 점검이라 24h 범위
-        recent = r["today"] + r["yesterday"]
+        # 전날(0~24시) 발행량으로 누락 감지 — 오늘은 아직 진행 중이라 하루치 기준에 부적합
         if r["duplicates"]:
             problems.append(f"⚠ {r['blog']}: 중복 {len(r['duplicates'])}건 → {list(r['duplicates'].keys())[:2]}")
-        elif recent < 4:
-            problems.append(f"⚠ {r['blog']}: 24h 발행 {recent}건 (누락 의심, 기대치 6)")
+        elif r["yesterday"] < 4:
+            problems.append(
+                f"⚠ {r['blog']}: 어제 {r['yesterday']}건 (누락 의심, 기대치 6) / 오늘 {r['today']}건"
+            )
         else:
-            summary_ok.append(f"{r['blog']}({recent})")
+            summary_ok.append(f"{r['blog']}(어제 {r['yesterday']} / 오늘 {r['today']})")
+
+    yesterday_total = sum(r["yesterday"] for r in results)
+    today_total = sum(r["today"] for r in results)
 
     if problems or errors:
         msg = f"📊 블로그 일일 점검 ({today})\n\n" + "\n".join(problems)
@@ -106,9 +110,18 @@ def main():
             msg += "\n\n에러:\n" + "\n".join(errors)
         if summary_ok:
             msg += f"\n\n나머지 정상: {', '.join(summary_ok)}"
+        msg += (
+            f"\n\n합계\n"
+            f"- 어제({yesterday}) 00~24시: {yesterday_total}건\n"
+            f"- 오늘({today}) 00시~현재: {today_total}건"
+        )
     else:
-        total_24h = sum(r["today"] + r["yesterday"] for r in results)
-        msg = f"✅ 블로그 10개 모두 정상 ({today})\n중복 0, 24h 합계 {total_24h}건"
+        msg = (
+            f"✅ 블로그 10개 모두 정상 ({today})\n"
+            f"중복 0\n"
+            f"어제({yesterday}) 00~24시: {yesterday_total}건\n"
+            f"오늘({today}) 00시~현재: {today_total}건"
+        )
 
     print(msg)
     send_telegram(msg)
