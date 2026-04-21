@@ -125,22 +125,46 @@ def get_existing_slugs():
     return slugs
 
 
-def get_recent_titles(limit=10):
-    """Get recent post titles for internal linking context."""
+def get_recent_posts_for_linking(limit=10):
+    """Return list of dicts {title, slug} for internal linking context."""
     posts_dir = os.path.join(get_repo_root(), "_posts")
-    titles = []
+    posts = []
     if os.path.exists(posts_dir):
         files = sorted(os.listdir(posts_dir), reverse=True)
         for filename in files[:limit]:
-            if filename.endswith(".md"):
-                filepath = os.path.join(posts_dir, filename)
-                with open(filepath, "r", encoding="utf-8") as f:
-                    for line in f:
-                        if line.startswith("title:"):
-                            title = line.split(":", 1)[1].strip().strip('"')
-                            titles.append(title)
-                            break
-    return titles
+            if not filename.endswith(".md"):
+                continue
+            filepath = os.path.join(posts_dir, filename)
+            slug = re.sub(r"^\d{4}-\d{2}-\d{2}-", "", filename[:-3])
+            with open(filepath, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.startswith("title:"):
+                        title = line.split(":", 1)[1].strip().strip('"').strip("'")
+                        posts.append({"title": title, "slug": slug})
+                        break
+    return posts
+
+
+def get_recent_titles(limit=10):
+    return [p["title"] for p in get_recent_posts_for_linking(limit)]
+
+
+def inject_internal_links(content, recent_posts):
+    """Replace exact title mentions in content with Markdown links to /slug/."""
+    if not recent_posts:
+        return content
+    for rp in recent_posts:
+        title = rp["title"]
+        slug = rp["slug"]
+        if not title or not slug or title not in content:
+            continue
+        safe_title = re.escape(title)
+        pattern = re.compile(
+            r"(?<!\]\()(?<!\[)\b" + safe_title + r"\b(?!\])"
+        )
+        replacement = f"[{title}](/{slug}/)"
+        content = pattern.sub(replacement, content, count=1)
+    return content
 
 
 def slugify(title):
@@ -228,11 +252,15 @@ def _generate_post_content_inner(client, title, category, recent_titles):
 
     internal_links_hint = ""
     if recent_titles:
-        links = "\n".join(f"- {t}" for t in recent_titles[:5])
+        links = "\n".join(f"- {t}" for t in recent_titles[:10])
         internal_links_hint = (
-            f"\n\nFor internal linking, naturally reference 1-2 of these related articles "
-            f"where relevant (use the exact title in a mention like "
-            f"'as we covered in [Article Title]'):\n{links}"
+            "\n\nINTERNAL LINKING (mandatory, SEO-critical):\n"
+            "- Reference AT LEAST 3 of the related articles below inside the body text.\n"
+            "- Mention each one by its EXACT title. Do not paraphrase the title.\n"
+            "- Weave them into natural sentences (e.g., 'as I wrote in [Exact Title]', "
+            "'for more on this check [Exact Title]'). Do not invent URLs — the titles alone are enough; a post-processor will link them.\n"
+            "- Spread them across different sections of the article.\n\n"
+            f"Related articles to reference (exact titles):\n{links}"
         )
 
     response = _openai_retry(lambda: client.chat.completions.create(
@@ -298,13 +326,15 @@ def create_post():
     """Generate and save a new unique blog post."""
     used_topics = load_used_topics()
     existing_slugs = get_existing_slugs()
-    recent_titles = get_recent_titles(10)
+    recent_posts = get_recent_posts_for_linking(10)
+    recent_titles = [p["title"] for p in recent_posts]
 
     title, category, slug = generate_unique_topic(used_topics, existing_slugs)
     print(f"Generating post: {title}")
     print(f"Category: {category}")
 
     content = generate_post_content(title, category, recent_titles)
+    content = inject_internal_links(content, recent_posts)
     description = generate_meta_description(title)
 
     today = datetime.datetime.now()

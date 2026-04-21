@@ -22,10 +22,15 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install openai
-      - name: Generate new post
+      - name: Generate new post (with retry on transient failures)
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 60
+          command: python scripts/generate_post.py
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: python scripts/generate_post.py
       - name: Commit new post
         run: |
           git config user.name "PetCarePro Bot"
