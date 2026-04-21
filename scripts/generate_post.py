@@ -149,21 +149,76 @@ def get_recent_titles(limit=10):
     return [p["title"] for p in get_recent_posts_for_linking(limit)]
 
 
-def inject_internal_links(content, recent_posts):
-    """Replace exact title mentions in content with Markdown links to /slug/."""
+# inject_internal_links v2 (2026-04-21): exact title + partial-phrase match + Further Reading fallback
+def inject_internal_links(content, recent_posts, min_links=3, max_links=5):
+    """Weave internal links into the post. Strategy:
+    1) Exact title match → wrap in a Markdown link
+    2) If title didn't appear verbatim, try the first 3-5 meaningful words as a phrase
+    3) If total inserted links < min_links, append a '## Further Reading' list at the end
+    """
     if not recent_posts:
         return content
+
+    inserted_slugs = set()
+    STOPWORDS = {"the", "a", "an", "for", "and", "with", "to", "of", "in", "on", "at", "is", "are", "my"}
+
+    def already_linked(slug):
+        return f"](/{slug}/)" in content
+
+    # Pass 1: exact title
     for rp in recent_posts:
-        title = rp["title"]
-        slug = rp["slug"]
-        if not title or not slug or title not in content:
+        if len(inserted_slugs) >= max_links:
+            break
+        title = rp.get("title", "")
+        slug = rp.get("slug", "")
+        if not title or not slug or already_linked(slug):
+            continue
+        if title not in content:
             continue
         safe_title = re.escape(title)
-        pattern = re.compile(
-            r"(?<!\]\()(?<!\[)\b" + safe_title + r"\b(?!\])"
-        )
-        replacement = f"[{title}](/{slug}/)"
-        content = pattern.sub(replacement, content, count=1)
+        pattern = re.compile(r"(?<!\]\()(?<!\[)" + safe_title + r"(?!\])")
+        new_content, n = pattern.subn(f"[{title}](/{slug}/)", content, count=1)
+        if n:
+            content = new_content
+            inserted_slugs.add(slug)
+
+    # Pass 2: partial phrase (first 3-5 meaningful words, case-insensitive)
+    for rp in recent_posts:
+        if len(inserted_slugs) >= max_links:
+            break
+        title = rp.get("title", "")
+        slug = rp.get("slug", "")
+        if not title or not slug or slug in inserted_slugs or already_linked(slug):
+            continue
+        words = [w for w in re.findall(r"[A-Za-z0-9']+", title)
+                 if w.lower() not in STOPWORDS and len(w) > 1]
+        if len(words) < 3:
+            continue
+        for window in (5, 4, 3):
+            if len(words) < window:
+                continue
+            phrase_words = words[:window]
+            phrase_pattern = r"(?<!\]\()(?<!\[)" + r"\s+".join(map(re.escape, phrase_words)) + r"(?!\])"
+            m = re.search(phrase_pattern, content, flags=re.IGNORECASE)
+            if m:
+                matched = m.group(0)
+                content = content[: m.start()] + f"[{matched}](/{slug}/)" + content[m.end():]
+                inserted_slugs.add(slug)
+                break
+
+    # Fallback: append Further Reading if we still don't have enough links
+    if len(inserted_slugs) < min_links:
+        remaining = [rp for rp in recent_posts
+                     if rp.get("slug") and rp["slug"] not in inserted_slugs
+                     and not already_linked(rp["slug"])]
+        need = max(min_links - len(inserted_slugs), 3)
+        picks = remaining[:need]
+        if picks:
+            block = "\n\n## Further Reading\n\n"
+            for rp in picks:
+                block += f"- [{rp['title']}](/{rp['slug']}/)\n"
+            content = content.rstrip() + block
+
     return content
 
 
