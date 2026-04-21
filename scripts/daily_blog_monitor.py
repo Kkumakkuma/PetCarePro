@@ -48,79 +48,65 @@ def list_posts(blog: str) -> list[str]:
     return [it["name"] for it in items if isinstance(it, dict) and it.get("name", "").endswith(".md")]
 
 
-def check_blog(blog: str, today: str, yesterday: str) -> dict:
+def check_blog(blog: str, today_utc: str) -> dict:
     files = list_posts(blog)
     slug_count: dict[str, int] = {}
     today_count = 0
-    yesterday_count = 0
     for f in files:
         m = re.match(r"^(\d{4}-\d{2}-\d{2})-(.+)\.md$", f)
         if not m:
             continue
         d, slug = m.group(1), re.sub(r"-\d{1,3}$", "", m.group(2))  # -2,-3 접미사 무시
         slug_count[slug] = slug_count.get(slug, 0) + 1
-        if d == today:
+        if d == today_utc:
             today_count += 1
-        elif d == yesterday:
-            yesterday_count += 1
     dup = {s: c for s, c in slug_count.items() if c > 1}
     return {
         "blog": blog,
         "total": len(files),
         "today": today_count,
-        "yesterday": yesterday_count,
         "duplicates": dup,
     }
 
 
 def main():
-    # KST 기준 오늘/어제
-    kst = timezone(timedelta(hours=9))
-    now = datetime.now(kst)
-    today = now.date().isoformat()
-    yesterday = (now.date() - timedelta(days=1)).isoformat()
+    # UTC 기준 오늘(00:00 ~ 현재)
+    now_utc = datetime.now(timezone.utc)
+    today_utc = now_utc.date().isoformat()
+    now_str = now_utc.strftime("%H:%M")
 
     results = []
     errors = []
     for b in BLOGS:
         try:
-            results.append(check_blog(b, today, yesterday))
+            results.append(check_blog(b, today_utc))
         except Exception as e:
             errors.append(f"{b}: {e}")
 
     problems = []
     summary_ok = []
     for r in results:
-        # 전날(0~24시) 발행량으로 누락 감지 — 오늘은 아직 진행 중이라 하루치 기준에 부적합
         if r["duplicates"]:
-            problems.append(f"⚠ {r['blog']}: 중복 {len(r['duplicates'])}건 → {list(r['duplicates'].keys())[:2]}")
-        elif r["yesterday"] < 4:
             problems.append(
-                f"⚠ {r['blog']}: 어제 {r['yesterday']}건 (누락 의심, 기대치 6) / 오늘 {r['today']}건"
+                f"⚠ {r['blog']}: 중복 {len(r['duplicates'])}건 → {list(r['duplicates'].keys())[:2]}"
             )
         else:
-            summary_ok.append(f"{r['blog']}(어제 {r['yesterday']} / 오늘 {r['today']})")
+            summary_ok.append(f"{r['blog']}({r['today']})")
 
-    yesterday_total = sum(r["yesterday"] for r in results)
     today_total = sum(r["today"] for r in results)
+    header = f"UTC {today_utc} 00시~{now_str} 기준 발행량: {today_total}건"
 
     if problems or errors:
-        msg = f"📊 블로그 일일 점검 ({today})\n\n" + "\n".join(problems)
+        msg = f"📊 블로그 점검\n{header}\n\n" + "\n".join(problems)
         if errors:
             msg += "\n\n에러:\n" + "\n".join(errors)
         if summary_ok:
             msg += f"\n\n나머지 정상: {', '.join(summary_ok)}"
-        msg += (
-            f"\n\n합계\n"
-            f"- 어제({yesterday}) 00~24시: {yesterday_total}건\n"
-            f"- 오늘({today}) 00시~현재: {today_total}건"
-        )
     else:
         msg = (
-            f"✅ 블로그 10개 모두 정상 ({today})\n"
-            f"중복 0\n"
-            f"어제({yesterday}) 00~24시: {yesterday_total}건\n"
-            f"오늘({today}) 00시~현재: {today_total}건"
+            f"✅ 블로그 10개 정상 · 중복 0\n"
+            f"{header}\n"
+            + "\n".join(f"- {r['blog']}: {r['today']}건" for r in results)
         )
 
     print(msg)
