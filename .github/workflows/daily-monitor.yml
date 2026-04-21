@@ -1,10 +1,10 @@
 name: Daily Blog Monitor
 
 # 영어 블로그 10개 일일 점검 → 텔레그램 알림.
-# 매일 KST 18:07 (UTC 09:07).
+# UTC 23:50 (KST 익일 08:50) — UTC 00~24시 하루 발행 완료 직후에 총량 집계.
 on:
   schedule:
-    - cron: '7 9 * * *'
+    - cron: '50 23 * * *'
   workflow_dispatch:
 
 permissions:
