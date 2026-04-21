@@ -6,6 +6,7 @@ PetCarePro - Gumroad Promotional Post Generator v2
 """
 
 from openai import OpenAI
+from generate_post import get_recent_posts_for_linking, inject_internal_links
 import datetime
 import json
 import os
@@ -150,6 +151,10 @@ def create_promo_post():
     )
 
     post_content = response.choices[0].message.content
+    try:
+        post_content = inject_internal_links(post_content, get_recent_posts_for_linking(10), min_links=3, max_links=3)
+    except Exception as _e:
+        print(f"[warn] inject_internal_links failed: {_e}")
     today = datetime.datetime.now()
     date_str = today.strftime("%Y-%m-%d")
     slug = slugify(title)
