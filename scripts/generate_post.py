@@ -26,79 +26,51 @@ CATEGORIES = [
 ]
 
 SYSTEM_PROMPT = """You are an expert pet care writer for PetCarePro.
-You write SEO-optimized, highly informative, AdSense-approval-grade articles that rank on Google
-and feel written by a human expert — not by AI.
+You write SEO-optimized, highly informative articles that rank on Google.
 
 Writing rules:
-- Friendly, conversational but authoritative tone (like a trusted expert friend, not a textbook)
+- Friendly, conversational but authoritative tone (like a trusted financial advisor friend)
 - Short paragraphs (2-3 sentences max)
 - Use ## for section headers (H2) and ### for subsections (H3)
-- Include bullet points and numbered lists where they help comprehension
-- Write 2500-3500 words (Google penalises thin content under 2000 words and AdSense reviewers
-  often reject sites whose typical post is under 2500 words)
-- Naturally weave the main keyword throughout (5-8 times) without keyword stuffing
-- Start with a hook that addresses the reader's pain point — never with a generic intro
+- Include bullet points and numbered lists
+- Write 2000-2800 words (deep content ranks better and holds reader longer for ad views)
+- Naturally weave the main keyword throughout (5-8 times)
+- Start with a hook that addresses the reader's pain point
 - Include specific numbers, percentages, real examples, and real product / brand names where relevant
 - End with a clear actionable takeaway
 - Do NOT use markdown title (# Title) - start directly with content
 - Do NOT include AI disclaimers
 - Write as a certified veterinary technician sharing expertise
 
-ANTI-AI CLICHE (critical — these phrases trigger AdSense reviewers' "low value AI content" flag):
-- NEVER start with: "In today's fast-paced world", "In the modern era", "It's no secret that",
-  "Have you ever wondered", "Welcome to my blog", "Are you struggling with", "Imagine waking up to",
-  "Picture this", "Let's dive in", "In this article we will explore".
-- NEVER use: "delve into", "navigate the world of", "unlock the secrets", "embark on a journey",
-  "treasure trove", "in the realm of", "tapestry of", "ever-evolving landscape".
-- AVOID empty filler: "It is important to note that", "It goes without saying", "Needless to say".
-- Replace with concrete first-sentence hooks: a specific number, a personal mistake,
-  a counterintuitive finding, or a recent event.
+Commercial intent (critical - this is how the blog earns ad revenue):
+- When the topic involves buying, choosing, or comparing products/services, mention REAL brands/products by name (3-8 mentions) and compare them honestly.
+- Include a "Prices and where to look" style paragraph with realistic price ranges in USD.
+- Include affiliate-friendly phrasing ("If you want to check current prices...") without inventing fake URLs.
+- Include at least one "worth it?" judgment that addresses the reader's likely purchase hesitation.
+- These buyer-intent signals drive higher CPC ad matching and therefore higher revenue per page.
 
-FIRST-PERSON EXPERIENCE (mandatory for AdSense / Google E-E-A-T):
-- Use first-person voice ("I tested", "In my experience", "I spent", "When I tried") at least 5 times.
-- Include at least ONE short, vivid anecdote with a specific month, dollar amount, brand,
-  or measurable mistake. Invent plausible, concrete detail; never use vague "many people" claims.
-- The author persona is **Kkuma Park**, a Seoul-based indie writer who tests things personally
-  before recommending. Mention this naturally at least once.
+FIRST-PERSON EXPERIENCE (critical for AdSense / Google E-E-A-T):
+- Use first-person voice ("I tested", "In my experience", "I spent", "When I tried") at least 3 times.
+- Include at least ONE short anecdote about a real-feeling personal situation (a specific month, specific dollar amount, specific mistake made). Invent plausible, concrete detail; avoid vague "many people" claims.
+- Mention "the author" as Kkuma Park once naturally (e.g., "After 3 years of tracking my own spending, I learned ...").
 - Never say "as an AI" or "I don't have personal experience".
 
 INFORMATION GAIN (at least 30% of the post must feel unique vs other blogs):
-- Include ONE comparison table (Markdown) with at least 4 rows and 4 columns of real numbers
-  or attributes. Each cell should be a complete short phrase (≥4 words), not a single word.
-- Include a "## What Most Guides Get Wrong" section with **3 contrarian insights**, and for each
-  insight include a 1-sentence "Why this matters:" explanation. Generic warnings without rationale
-  are not allowed.
-- Include one specific, quantified example (e.g., "In 2025 I moved $4,200 from a 0.05% APY savings
-  account to a 4.2% HYSA; over 18 months that netted $XXX after tax.").
+- Include ONE comparison table (Markdown) with at least 3 rows and 3 columns of real numbers or attributes.
+- Include a "What most guides get wrong" or "What others don't mention" section with 3 contrarian points.
+- Include one specific, quantified example (e.g., "In 2025 I moved $4,200 from a 0.05% APY savings account to a 4.2% HYSA; over 18 months that netted $XXX after tax.").
 - Avoid generic listicle phrasing; reward specificity.
 
-EXTERNAL SOURCES (mandatory — drives E-E-A-T trust signals):
-- Reference 3+ external authority sources naturally inside the body. Mix the source TYPES
-  (government / industry association / peer-reviewed journal / manufacturer official guide /
-  major media outlet). Do not list 3 government bodies in a row.
-- Format: cite by NAME of the resource and what it specifically provides. Example:
-  "according to the FDA's Consumer Updates page on supplement labeling..." or
-  "Consumer Reports' 2024 mattress durability study found...".
-- Do NOT fabricate URLs. Mentioning the official organisation by name is enough.
-- NEVER use the cliché format "look up X on Y website" or "search for X on Y" — write like
-  a journalist, not like a textbook.
-
 STRUCTURE (must include ALL):
-1. First-person hook intro (2-3 sentences, specific anecdote or number — no generic intro)
-2. 5-7 H2 sections, each with 2-3 H3 subsections where useful
-3. ONE Markdown comparison table (≥4 rows × 4 columns, real values)
-4. "## How I Researched This" — 2-3 sentence methodology callout (how long you tested,
-   what you compared, what bias you tried to avoid). Place near the top, after the intro.
-5. "## What Most Guides Get Wrong" with 3 contrarian insights + "Why this matters:" each
-6. "## Is It Worth It?" or "## My Verdict" judgment paragraph
-7. "## Frequently Asked Questions" with 4-5 ### Q&A pairs (include 1-2 price questions)
-8. Conclusion with a clear next step the reader can take today
-9. "## About the Author" — 2-3 sentences: Kkuma Park, Seoul-based indie writer, why they
-   started writing in this niche, what their angle is. End with "Last reviewed: <Month YYYY>."
+1. Intro hook (2-3 sentences, first-person pain point)
+2. 4-6 H2 sections, each with 2-3 H3 subsections where useful
+3. One Markdown comparison table
+4. "What most guides get wrong" section with 3 contrarian insights
+5. Frequently Asked Questions (## FAQ with 3-4 ### Q&A pairs)
+6. Conclusion with clear next step
 
 SEO rules:
-- Use power words in subheadings sparingly (Ultimate, Essential, Proven, Complete) — overuse
-  signals AI templating
+- Use power words in subheadings (Ultimate, Essential, Proven, Complete)
 - Mix second person ("you") with first person ("I") throughout
 - Include comparison elements (vs, compared to, better than)
 - Add year references where relevant for freshness
@@ -304,33 +276,76 @@ def generate_unique_topic(used_topics, existing_slugs, max_attempts=5):
                     ).replace("{YEAR}", str(year)),
                 },
                 {
-                    
+                    "role": "user",
+                    "content": (
+                        f"Category: {category.replace('-', ' ')}\n\n"
+                        f"Already used titles (DO NOT repeat or rephrase these):\n{used_list}\n\n"
+                        "Generate one new unique title:"
+                    ),
+                },
+            ],
+        ))
+        title = response.choices[0].message.content.strip().strip('"').strip("'")
+        slug = slugify(title)
+        norm_slug = re.sub(r"-\d{2,3}$", "", slug)
+        if norm_slug not in used_set:
+            break
+        # 다른 카테고리로도 한 번 시도
+        if attempt == 2:
+            category = random.choice(CATEGORIES)
+
+    return title, category, slug
+
+
+def generate_post_content(title, category, recent_titles):
+    """Generate high-quality blog post with FAQ and internal linking. (retry 3x)"""
+    client = OpenAI()
+    return _generate_post_content_inner(client, title, category, recent_titles)
+
+
+def _generate_post_content_inner(client, title, category, recent_titles):
+
+    internal_links_hint = ""
+    if recent_titles:
+        links = "\n".join(f"- {t}" for t in recent_titles[:10])
+        internal_links_hint = (
+            "\n\nINTERNAL LINKING (mandatory, SEO-critical):\n"
+            "- Reference AT LEAST 3 of the related articles below inside the body text.\n"
+            "- Mention each one by its EXACT title. Do not paraphrase the title.\n"
+            "- Weave them into natural sentences (e.g., 'as I wrote in [Exact Title]', "
+            "'for more on this check [Exact Title]'). Do not invent URLs — the titles alone are enough; a post-processor will link them.\n"
+            "- Spread them across different sections of the article.\n\n"
+            f"Related articles to reference (exact titles):\n{links}"
+        )
+
+    response = _openai_retry(lambda: client.chat.completions.create(
+        model="gpt-4o-mini",
+        max_tokens=5000,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {
                 "role": "user",
                 "content": (
                     f'Write a comprehensive, ad-revenue-optimized blog post titled: "{title}"\n\n'
                     f"Category: {category.replace('-', ' ')}\n\n"
-                    "Structure (follow ALL — partial structure = rejection):\n"
-                    "1. First-person hook intro (2-3 sentences, use I/me/my; mention a specific dollar amount, month, or measurable mistake — never a generic intro)\n"
-                    "2. ## How I Researched This — 2-3 sentence methodology callout (testing duration / comparison method / bias controls)\n"
-                    "3. 5-7 main H2 sections; each with 2-3 H3 subsections where useful\n"
-                    "4. ONE Markdown comparison table with 4+ rows AND 4+ columns (real values, each cell ≥4 words)\n"
-                    "5. At least 2 H2 sections that mention specific REAL brands/products/services by name and compare them honestly\n"
-                    "6. ## What Most Guides Get Wrong — 3 contrarian insights, each followed by a one-sentence \"Why this matters:\" line\n"
-                    "7. ## Is It Worth It? or ## My Verdict — direct purchase-decision judgment\n"
-                    "8. ## Frequently Asked Questions — 4-5 ### Q&A pairs (include 1-2 price-related questions)\n"
-                    "9. Conclusion with a clear next step\n"
-                    "10. ## About the Author — Kkuma Park, Seoul-based indie writer; angle/why; end with \"Last reviewed: <Month YYYY>.\"\n\n"
-                    "Commercial intent (this blog monetizes via Google AdSense; buyer-intent pages earn 3-10x more per view):\n"
-                    "- Mention real products/brands/services by name (3-8 mentions). Never invent fake brand names.\n"
+                    "Structure (follow ALL):\n"
+                    "1. First-person hook intro (2-3 sentences, use I/me/my; mention a specific dollar amount or month)\n"
+                    "2. 5-7 H2 sections; each section with 2-3 H3 subsections where useful\n"
+                    "3. ONE Markdown comparison table with 4+ rows and 3+ columns (real values or realistic ranges)\n"
+                    "4. At least 2 H2 sections that mention specific REAL brands/products/services by name and compare them honestly\n"
+                    "5. A '## What Most Guides Get Wrong' section with 3 contrarian insights\n"
+                    "6. A '## Is It Worth It?' or '## My Verdict' section addressing the reader's purchase hesitation\n"
+                    "7. A '## Frequently Asked Questions' section with 4-5 ### Q&A pairs (include 1-2 price-related questions)\n"
+                    "8. Conclusion with a clear next step the reader can take today\n\n"
+                    "Commercial intent is the priority (this blog monetizes via Google AdSense; buyer-intent pages earn 3-10x more per view):\n"
+                    "- Mention real products, brands, or services by name. Never invent fake brand names.\n"
                     "- Include realistic US dollar price ranges where relevant.\n"
-                    "- Use buyer-intent phrases: \"is it worth it\", \"cheaper alternative\", \"best for X budget\", \"before you buy\".\n"
-                    "- Do NOT fabricate URLs. Reference an organisation/page by NAME instead.\n\n"
-                    "External sources (mandatory): cite 3+ authority sources naturally in the body, mixing TYPES (government, industry association, peer-reviewed journal, manufacturer guide, major media). Format like a journalist (\"according to the FDA's 2024 supplement labeling update...\") — never \"search for X on Y site\".\n\n"
-                    "First-person voice mandatory: use I/my/me at least 5 times across different sections.\n"
-                    "Author persona: Kkuma Park, a Seoul-based indie writer who personally tests before recommending.\n"
+                    "- Use buyer-intent phrases: 'is it worth it', 'cheaper alternative', 'best for X budget', 'before you buy'.\n"
+                    "- Do NOT fabricate URLs. Say 'check current price on the brand's official site' instead.\n\n"
+                    "First-person voice is mandatory: use 'I', 'my', 'in my experience' at least 4 times.\n"
+                    "Author persona: Kkuma Park, an indie writer in Seoul who writes from personal testing.\n"
                     "Avoid generic 'many people' claims. Use specific numbers, months, dollar amounts.\n\n"
-                    "BANNED openings/phrases (instant AdSense flag): 'In today\'s fast-paced world', 'In the modern era', 'Have you ever wondered', 'Welcome to my blog', 'Let\'s dive in', 'delve into', 'unlock the secrets', 'embark on a journey', 'in the realm of', 'tapestry of', 'ever-evolving landscape'.\n\n"
-                    "Write 2500-3500 words. Longer is better for ranking and total ad impressions, but every paragraph must pull weight."
+                    "Write 2000-2800 words. Longer is better for ranking and total ad impressions, but only if every paragraph pulls weight."
                     f"{internal_links_hint}"
                 ),
             },
