@@ -274,7 +274,7 @@ def generate_unique_topic(used_topics, existing_slugs, max_attempts=5):
         prompt_strength = "" if attempt == 0 else f" (PREVIOUS ATTEMPT WAS DUPLICATE — try a totally different angle. Attempt #{attempt + 1})"
         response = _openai_retry(lambda: client.chat.completions.create(
             model="gpt-4o-mini",
-            max_tokens=200,
+            max_tokens=6000,
             temperature=temperature,
             messages=[
                 {
@@ -356,28 +356,39 @@ def _generate_post_content_inner(client, title, category, recent_titles):
                 "content": (
                     f'Write a comprehensive, ad-revenue-optimized blog post titled: "{title}"\n\n'
                     f"Category: {category.replace('-', ' ')}\n\n"
+                    "WORD COUNT IS A HARD REQUIREMENT — 2500 to 3500 words.\n"
+                    "Articles under 2500 words trigger Google's thin-content filter and AdSense rejection. This is non-negotiable.\n"
+                    "If you finish drafting and the total is under 2500 words, you MUST keep expanding before delivering: add another H2 with a fresh angle, deepen a personal story with concrete numbers, or add a 4th-5th item to your comparison table. Do not stop early. Do not add filler — add substance.\n\n"
                     "Structure (follow ALL — partial structure = rejection):\n"
-                    "1. First-person hook intro (2-3 sentences, use I/me/my; mention a specific dollar amount, month, or measurable mistake — never a generic intro)\n"
-                    "2. ## How I Researched This — 2-3 sentence methodology callout (testing duration / comparison method / bias controls)\n"
-                    "3. 5-7 main H2 sections; each with 2-3 H3 subsections where useful\n"
-                    "4. ONE Markdown comparison table with 4+ rows AND 4+ columns (real values, each cell ≥4 words)\n"
-                    "5. At least 2 H2 sections that mention specific REAL brands/products/services by name and compare them honestly\n"
-                    "6. ## What Most Guides Get Wrong — 3 contrarian insights, each followed by a one-sentence \"Why this matters:\" line\n"
-                    "7. ## Is It Worth It? or ## My Verdict — direct purchase-decision judgment\n"
-                    "8. ## Frequently Asked Questions — 4-5 ### Q&A pairs (include 1-2 price-related questions)\n"
-                    "9. Conclusion with a clear next step\n"
-                    "10. ## About the Author — Kkuma Park, Seoul-based indie writer; angle/why; end with \"Last reviewed: <Month YYYY>.\"\n\n"
+                    "1. First-person hook intro (3-5 sentences, use I/me/my; open with a specific dollar amount, month, or measurable mistake — never a generic intro)\n"
+                    "2. ## How I Researched This — 3-4 sentence methodology callout (testing duration, comparison method, what bias you tried to avoid, what you would not have known without testing)\n"
+                    "3. 6-8 main H2 sections (NOT 4-5 — six is the floor); each H2 should be 250-400 words with 2-3 H3 subsections where useful\n"
+                    "4. ONE Markdown comparison table with 5+ rows AND 4+ columns (real values, each cell at least one full sentence of 6+ words)\n"
+                    "5. At least 3 H2 sections that mention specific REAL brands/products/services by name and compare them honestly with concrete spec/price data\n"
+                    "6. ## What Most Guides Get Wrong — 3 contrarian insights, each opened with the contrarian claim, followed by \"Why this matters:\" line, followed by a 2-3 sentence concrete example or anecdote\n"
+                    "7. ## Is It Worth It? or ## My Verdict — direct purchase-decision judgment with a buyer profile (\"worth it if you …, skip if you …\")\n"
+                    "8. ## Frequently Asked Questions — 5-6 ### Q&A pairs (include 2 price-related questions and 1 \"how long until I see results\" question). Each answer 2-4 sentences.\n"
+                    "9. Conclusion with a clear, actionable next step the reader can take today\n"
+                    "10. ## About the Author — Kkuma Park, Seoul-based indie writer; angle/why they cover this niche; what real-world test or experience qualifies them; end with \"Last reviewed: <Month YYYY>.\"\n\n"
                     "Commercial intent (this blog monetizes via Google AdSense; buyer-intent pages earn 3-10x more per view):\n"
-                    "- Mention real products/brands/services by name (3-8 mentions). Never invent fake brand names.\n"
-                    "- Include realistic US dollar price ranges where relevant.\n"
+                    "- Mention real products/brands/services by name (5-10 mentions across the post). Never invent fake brand names.\n"
+                    "- Include realistic US dollar price ranges where relevant — give a number, not just \"affordable\".\n"
                     "- Use buyer-intent phrases: \"is it worth it\", \"cheaper alternative\", \"best for X budget\", \"before you buy\".\n"
                     "- Do NOT fabricate URLs. Reference an organisation/page by NAME instead.\n\n"
-                    "External sources (mandatory): cite 3+ authority sources naturally in the body, mixing TYPES (government, industry association, peer-reviewed journal, manufacturer guide, major media). Format like a journalist (\"according to the FDA's 2024 supplement labeling update...\") — never \"search for X on Y site\".\n\n"
-                    "First-person voice mandatory: use I/my/me at least 5 times across different sections.\n"
+                    "External sources (mandatory): cite 3+ authority sources naturally in the body, mixing TYPES (government agency, industry association, peer-reviewed journal, manufacturer guide, major media outlet). Format like a journalist (\"according to the FDA's 2024 supplement labeling update...\") — never \"search for X on Y site\".\n\n"
+                    "First-person voice mandatory: use I/my/me at least 8 times across different sections — distribute, do not cluster in one section.\n"
                     "Author persona: Kkuma Park, a Seoul-based indie writer who personally tests before recommending.\n"
-                    "Avoid generic 'many people' claims. Use specific numbers, months, dollar amounts.\n\n"
-                    "BANNED openings/phrases (instant AdSense flag): 'In today\'s fast-paced world', 'In the modern era', 'Have you ever wondered', 'Welcome to my blog', 'Let\'s dive in', 'delve into', 'unlock the secrets', 'embark on a journey', 'in the realm of', 'tapestry of', 'ever-evolving landscape'.\n\n"
-                    "Write 2500-3500 words. Longer is better for ranking and total ad impressions, but every paragraph must pull weight."
+                    "Avoid generic 'many people' or 'most experts agree' claims. Replace with specific numbers, months, dollar amounts, brand names, or your own observed result.\n\n"
+                    "BANNED openings/phrases (instant AdSense flag): 'In today\'s fast-paced world', 'In the modern era', 'Have you ever wondered', 'Welcome to my blog', 'Let\'s dive in', 'delve into', 'unlock the secrets', 'embark on a journey', 'in the realm of', 'tapestry of', 'ever-evolving landscape', 'navigate the world of', 'treasure trove'.\n\n"
+                    "FINAL SELF-CHECK before you deliver (do this silently then output the article):\n"
+                    "  - Word count >= 2500? If not, expand. (count actual words excluding markdown syntax)\n"
+                    "  - 6+ main H2 sections present?\n"
+                    "  - Comparison table has 5+ rows?\n"
+                    "  - 3 contrarian insights, each with \"Why this matters:\" line and a concrete example?\n"
+                    "  - About the Author section ends with \"Last reviewed: <Month YYYY>\"?\n"
+                    "  - Zero banned phrases?\n"
+                    "  - 8+ first-person mentions distributed across sections?\n"
+                    "If any check fails, fix before output."
                     f"{internal_links_hint}"
                 ),
             },
