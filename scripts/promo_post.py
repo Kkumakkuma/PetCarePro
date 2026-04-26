@@ -6,7 +6,7 @@ PetCarePro - Gumroad Promotional Post Generator v2
 """
 
 from openai import OpenAI
-from generate_post import get_recent_posts_for_linking, inject_internal_links
+from generate_post import get_recent_posts_for_linking, inject_internal_links, _enforce_word_count
 import datetime
 import json
 import os
@@ -133,7 +133,7 @@ def create_promo_post():
     client = OpenAI()
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        max_tokens=4000,
+        max_tokens=7000,
         messages=[
             {"role": "system", "content": PROMO_SYSTEM_PROMPT},
             {
@@ -151,6 +151,10 @@ def create_promo_post():
     )
 
     post_content = response.choices[0].message.content
+    try:
+        post_content = _enforce_word_count(client, title, post_content, min_words=2700)
+    except Exception as _e:
+        print(f"[warn] enforce failed: {_e}")
     try:
         post_content = inject_internal_links(post_content, get_recent_posts_for_linking(10), min_links=3, max_links=3)
     except Exception as _e:
@@ -186,3 +190,6 @@ def create_promo_post():
 if __name__ == "__main__":
     filepath, filename = create_promo_post()
     print(f"Done! Promo post: {filename}")
+
+
+# v42_promo_wordcount_patched
