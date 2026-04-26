@@ -333,7 +333,7 @@ def generate_post_content(title, category, recent_titles):
 
 
 # === v4 단어수 강화 (2026-04-26) =================================
-def _enforce_word_count(client, title, content, min_words=2500, max_extra_words=2000):
+def _enforce_word_count(client, title, content, min_words=2700, max_extra_words=2000):
     """본문이 min_words 미만이면 GPT-4o-mini로 1회 확장. 시간/비용 trade-off."""
     wc = len(content.split())
     if wc >= min_words:
