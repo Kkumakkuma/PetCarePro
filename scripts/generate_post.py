@@ -331,6 +331,39 @@ def generate_post_content(title, category, recent_titles):
     return _generate_post_content_inner(client, title, category, recent_titles)
 
 
+
+# === v4 단어수 강화 (2026-04-26) =================================
+def _enforce_word_count(client, title, content, min_words=2500, max_extra_words=2000):
+    """본문이 min_words 미만이면 GPT-4o-mini로 1회 확장. 시간/비용 trade-off."""
+    wc = len(content.split())
+    if wc >= min_words:
+        return content
+    try:
+        resp = _openai_retry(lambda: client.chat.completions.create(
+            model="gpt-4o-mini",
+            max_tokens=6000,
+            messages=[
+                {"role": "system", "content": (
+                    "You add substantive depth to blog posts. "
+                    "Append fresh H2 sections (with H3 subsections), real numbers, brand names, "
+                    "and specific personal anecdotes. NO filler, NO repetition, NO meta-commentary. "
+                    "Return ONLY the new sections to append (start directly with '## ...')."
+                )},
+                {"role": "user", "content": (
+                    f"My post titled \"{title}\" is currently {wc} words but AdSense requires {min_words}+ words.\n"
+                    f"Append 2-3 new H2 sections that genuinely fit the topic with first-person voice, "
+                    f"real brand/price details, and concrete anecdotes. Approximately {min_words - wc + 200} more words.\n\n"
+                    f"Existing post (do not repeat content from this):\n---\n{content[:7000]}\n---"
+                )},
+            ],
+        ))
+        extra = resp.choices[0].message.content.strip()
+        return content.rstrip() + "\n\n" + extra
+    except Exception as _e:
+        print(f"[expand] failed: {_e}")
+        return content
+
+
 def _generate_post_content_inner(client, title, category, recent_titles):
 
     internal_links_hint = ""
@@ -348,7 +381,7 @@ def _generate_post_content_inner(client, title, category, recent_titles):
 
     response = _openai_retry(lambda: client.chat.completions.create(
         model="gpt-4o-mini",
-        max_tokens=5000,
+        max_tokens=8000,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {
@@ -395,9 +428,9 @@ def _generate_post_content_inner(client, title, category, recent_titles):
         ],
     ))
 
-    return response.choices[0].message.content
-
-
+    content = response.choices[0].message.content
+    content = _enforce_word_count(client, title, content)
+    return content
 def generate_meta_description(title):
     """Generate a unique, compelling meta description."""
     client = OpenAI()
@@ -432,7 +465,7 @@ def create_post():
     print(f"Category: {category}")
 
     content = generate_post_content(title, category, recent_titles)
-    content = inject_internal_links(content, recent_posts)
+    content = inject_internal_links(content, recent_posts, min_links=5, max_links=8)
     description = generate_meta_description(title)
 
     today = datetime.datetime.now()
@@ -482,3 +515,6 @@ if __name__ == "__main__":
     else:
         filepath, filename = create_post()
     print(f"Done! Post generated: {filename}")
+
+
+# v4_wordcount_patched
