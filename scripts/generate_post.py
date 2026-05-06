@@ -258,23 +258,114 @@ def slugify(title):
     return slug.strip("-")
 
 
-def generate_unique_topic(used_topics, existing_slugs, max_attempts=5):
-    """Ask GPT to generate a unique, high-CPC long-tail keyword topic. 재시도 강화."""
+# === v5 diversity helpers (2026-05-06) ===========================
+TITLE_PATTERNS = [
+    "Best [thing] for [use case] in [YEAR]",
+    "[Brand A] vs [Brand B]: Which Is Better for [use case] in [YEAR]",
+    "Is [thing] Worth It in [YEAR]? My [N]-Month Review",
+    "How Much Does [thing] Cost in [YEAR]? Real Numbers From My Experience",
+    "[N] Cheapest [things] That Actually [benefit] in [YEAR]",
+    "I Tried [product] for [N] [days/weeks] - Here Is What Happened",
+    "[Tool] Review [YEAR]: Pros, Cons, and Cheaper Alternatives",
+    "Top [N] [service type] for [specific audience] in [YEAR] (Ranked)",
+]
+PATTERN_PREFIXES = ["best", "is", "how much", "how to", "i tried", "top", "what", "the"]
+
+STOPWORDS_TITLE = {
+    "the","a","an","for","and","with","to","of","in","on","at","is","are","my","best","top","how","what",
+    "your","this","that","its","it","be","by","or","as","you","not","do","does","worth","real","experience",
+    "comparison","review","reviews","under","comparing","help","guide","tips","ultimate","cost","price",
+    "prices","most","new","more","than","compare","which","when","where","who","why","ranked",
+}
+
+
+def _title_words(s):
+    return [w.lower() for w in re.findall(r"[A-Za-z0-9']+", s) if w.lower() not in STOPWORDS_TITLE and len(w) > 2]
+
+
+def _jaccard(a, b):
+    if not a or not b:
+        return 0.0
+    A, B = set(a), set(b)
+    return len(A & B) / max(len(A | B), 1)
+
+
+def _recent_keywords(used_topics, window=14, top_n=6):
+    from collections import Counter
+    bag = Counter()
+    for t in used_topics[-window:]:
+        for w in _title_words(t):
+            bag[w] += 1
+    return [w for w, _ in bag.most_common(top_n)]
+
+
+def _pattern_of(title):
+    s = title.lower().strip()
+    if " vs " in s:
+        return "vs"
+    for p in PATTERN_PREFIXES:
+        if s.startswith(p + " "):
+            return p
+    return "other"
+
+
+def _least_used_category(used_topics, categories, window=30):
+    from collections import Counter
+    counts = Counter()
+    for t in used_topics[-window:]:
+        slug = slugify(t)
+        for c in categories:
+            cw = c.replace("-", " ")
+            if cw in t.lower() or c in slug:
+                counts[c] += 1
+                break
+    sorted_cats = sorted(categories, key=lambda c: counts.get(c, 0))
+    return random.choice(sorted_cats[:max(5, len(sorted_cats) // 3)])
+
+
+def _forced_pattern_hint(used_topics, recent_n=5):
+    if len(used_topics) < recent_n:
+        return None
+    prefixes = [_pattern_of(t) for t in used_topics[-recent_n:]]
+    most_common = max(set(prefixes), key=prefixes.count)
+    if prefixes.count(most_common) >= 4:
+        candidates = [p for p in PATTERN_PREFIXES if p != most_common]
+        return random.choice(candidates)
+    return None
+
+
+def generate_unique_topic(used_topics, existing_slugs, max_attempts=7):
+    """v5: GPT unique high-CPC long-tail topic 생성.
+    카테고리 회전 + 패턴 회전 + 키워드 차단 + 의미 유사도 차단.
+    """
     client = OpenAI()
     year = datetime.datetime.now().year
-    category = random.choice(CATEGORIES)
     used_set = set(slugify(t) for t in used_topics[-200:]) | existing_slugs
+    used_list = "\n".join(f"- {t}" for t in used_topics[-30:]) if used_topics else "(none yet)"
 
-    used_list = "\n".join(f"- {t}" for t in used_topics[-50:]) if used_topics else "(none yet)"
+    banned_keywords = _recent_keywords(used_topics, window=14, top_n=6)
+    banned_str = ", ".join(banned_keywords) if banned_keywords else "(none yet)"
+    forced_pattern = _forced_pattern_hint(used_topics, recent_n=5)
 
     title = ""
     slug = ""
+    category = random.choice(CATEGORIES)
+    last_reason = ""
     for attempt in range(max_attempts):
-        temperature = 1.0 + 0.1 * attempt   # 점점 다양성 ↑
-        prompt_strength = "" if attempt == 0 else f" (PREVIOUS ATTEMPT WAS DUPLICATE — try a totally different angle. Attempt #{attempt + 1})"
+        category = _least_used_category(used_topics, CATEGORIES, window=30)
+        temperature = 1.0 + 0.1 * attempt
+
+        hints = []
+        if forced_pattern:
+            hints.append(f"FORCED PATTERN: title MUST start with '{forced_pattern.title()}' (recent 5 posts overused other patterns).")
+        if attempt > 0:
+            hints.append(f"PREVIOUS attempt #{attempt} rejected ({last_reason}). Try a totally different angle, topic, AND pattern.")
+
+        forced_hint = ("\n" + "\n".join(hints)) if hints else ""
+
         response = _openai_retry(lambda: client.chat.completions.create(
             model="gpt-4o-mini",
-            max_tokens=6000,
+            max_tokens=400,
             temperature=temperature,
             messages=[
                 {
@@ -282,24 +373,24 @@ def generate_unique_topic(used_topics, existing_slugs, max_attempts=5):
                     "content": (
                         f"You generate blog post titles for a {BLOG_NICHE} blog.\n"
                         "TARGET: HIGH-CPC buyer-intent long-tail keywords that drive ad revenue.\n\n"
-                        "Preferred title patterns (pick one that fits):\n"
-                        "- 'Best [product/service] for [specific use case] in {YEAR}'\n"
-                        "- '[Brand A] vs [Brand B]: Which Is Better for [use case] in {YEAR}?'\n"
-                        "- 'Is [product/service] Worth It in {YEAR}? My [N]-Month Review'\n"
-                        "- 'How Much Does [thing] Cost in {YEAR}? Real Numbers From My Experience'\n"
-                        "- '[N] Cheapest [things] That Actually [benefit] in {YEAR}'\n"
-                        "- 'I Tried [product] for [N] [days/weeks] - Here Is What Happened'\n"
-                        "- '[Tool] Review {YEAR}: Pros, Cons, and Cheaper Alternatives'\n"
-                        "- 'Top [N] [service type] for [specific audience] in {YEAR} (Ranked)'\n\n"
+                        "Title patterns (mix across the full set — do NOT default to 'Best X' every time):\n"
+                        "1. 'Best [product/service] for [specific use case] in {YEAR}'\n"
+                        "2. '[Brand A] vs [Brand B]: Which Is Better for [use case] in {YEAR}?'\n"
+                        "3. 'Is [product/service] Worth It in {YEAR}? My [N]-Month Review'\n"
+                        "4. 'How Much Does [thing] Cost in {YEAR}? Real Numbers From My Experience'\n"
+                        "5. '[N] Cheapest [things] That Actually [benefit] in {YEAR}'\n"
+                        "6. 'I Tried [product] for [N] [days/weeks] - Here Is What Happened'\n"
+                        "7. '[Tool] Review {YEAR}: Pros, Cons, and Cheaper Alternatives'\n"
+                        "8. 'Top [N] [service type] for [specific audience] in {YEAR} (Ranked)'\n\n"
                         "Rules:\n"
-                        "- Long-tail (5-12 words) real Google search query\n"
-                        "- Buyer intent > informational intent (people about to spend money)\n"
-                        "- Mention specific product/brand/price/number when natural (drives CPC)\n"
-                        f"- Relevant to {year}\n"
-                        "- MUST be completely different from the used titles below\n"
-                        "- DO NOT rephrase an existing title\n"
-                        "- Avoid pure listicles without buyer intent (e.g., '10 tips for X' without a product angle)\n\n"
-                        f"{prompt_strength}\n"
+                        "- Long-tail (5-12 words) real Google search query.\n"
+                        "- Buyer intent > informational intent (people about to spend money).\n"
+                        "- Mention specific product/brand/price/number when natural.\n"
+                        f"- Relevant to {year}.\n"
+                        "- MUST be completely different from used titles below — different topic AND different pattern.\n"
+                        "- DO NOT rephrase or merely synonym-swap an existing title.\n"
+                        f"- BANNED keywords (over-represented in last 14 posts, ABSOLUTELY do not use any of these in the title): {banned_str}.\n"
+                        f"{forced_hint}\n\n"
                         "Reply with ONLY the title, nothing else."
                     ).replace("{YEAR}", str(year)),
                 },
@@ -316,11 +407,28 @@ def generate_unique_topic(used_topics, existing_slugs, max_attempts=5):
         title = response.choices[0].message.content.strip().strip('"').strip("'")
         slug = slugify(title)
         norm_slug = re.sub(r"-\d{2,3}$", "", slug)
-        if norm_slug not in used_set:
-            break
-        # 다른 카테고리로도 한 번 시도
-        if attempt == 2:
-            category = random.choice(CATEGORIES)
+
+        if norm_slug in used_set:
+            last_reason = "duplicate slug"
+            continue
+
+        title_lower = title.lower()
+        hit_banned = [bk for bk in banned_keywords if bk in title_lower]
+        if hit_banned:
+            last_reason = f"banned keyword used: {hit_banned[0]}"
+            continue
+
+        new_words = _title_words(title)
+        worst_jaccard = 0.0
+        for past in used_topics[-30:]:
+            j = _jaccard(new_words, _title_words(past))
+            if j > worst_jaccard:
+                worst_jaccard = j
+        if worst_jaccard >= 0.5:
+            last_reason = f"too similar (jaccard {worst_jaccard:.2f})"
+            continue
+
+        return title, category, slug
 
     return title, category, slug
 
@@ -518,3 +626,4 @@ if __name__ == "__main__":
 
 
 # v4_wordcount_patched
+# v5_diversity_patched 2026-05-06
