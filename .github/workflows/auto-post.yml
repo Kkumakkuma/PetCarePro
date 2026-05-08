@@ -63,3 +63,46 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: IndexNow ping (Bing/Yandex/Naver)
+        if: success()
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, urllib.request, re
+          repo = os.environ.get("GITHUB_REPOSITORY","").split("/")[-1]
+          if not repo:
+              raise SystemExit(0)
+          since_iso = subprocess.check_output(
+              ["bash","-c","date -u -d '1 hour ago' +'%Y-%m-%dT%H:%M:%SZ'"]
+          ).decode().strip()
+          out = subprocess.check_output(
+              ["git","log","--since",since_iso,"--name-only","--pretty=format:","--diff-filter=A"]
+          ).decode()
+          urls = []
+          for line in out.split("\n"):
+              m = re.match(r"_posts/(\d{4})-(\d{2})-(\d{2})-(.+)\.md$", line.strip())
+              if m:
+                  yyyy, mm, dd, slug = m.groups()
+                  urls.append(f"https://kkumakkuma.github.io/{repo}/{yyyy}/{mm}/{dd}/{slug}/")
+          if not urls:
+              print("IndexNow: no new URLs in last hour")
+              raise SystemExit(0)
+          payload = {
+              "host": "kkumakkuma.github.io",
+              "key": "3edb9ac60100921ec4665d794fb30755",
+              "keyLocation": "https://kkumakkuma.github.io/3edb9ac60100921ec4665d794fb30755.txt",
+              "urlList": urls,
+          }
+          req = urllib.request.Request(
+              "https://api.indexnow.org/IndexNow",
+              data=json.dumps(payload).encode(),
+              headers={"Content-Type":"application/json"},
+              method="POST",
+          )
+          try:
+              resp = urllib.request.urlopen(req, timeout=15)
+              print(f"IndexNow OK: {resp.status} ({len(urls)} URLs)")
+          except Exception as e:
+              print(f"IndexNow fail (non-fatal): {e}")
+          PY
+

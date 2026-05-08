@@ -102,6 +102,23 @@ SEO rules:
 - Mix second person ("you") with first person ("I") throughout
 - Include comparison elements (vs, compared to, better than)
 - Add year references where relevant for freshness
+SEO v6 (2026-05-08) — RANKING + CTR + AI OVERVIEW INCLUSION:
+- TL;DR blockquote MUST be the very first content after the title. Format:
+  > **Quick answer:** <40-60 words direct answer that echoes the search query verbatim once and gives a complete one-paragraph answer with one specific number>
+  Then ONE blank line, THEN start the first-person hook intro.
+- This TL;DR is the strongest single trigger for Google AI Overview / Featured Snippet inclusion.
+- People Also Ask matching — among your 6-8 H2 sections, AT LEAST 4 must be phrased as the actual
+  questions a user types into Google (real PAA-style questions). Use these 4 question patterns
+  (each H2 = one pattern, in any order):
+    a) "How does <topic> work?" or "How can I <verb> <topic>?"
+    b) "Is <topic> worth it in YYYY?"
+    c) "What's the difference between <topic A> and <topic B>?"
+    d) "How much does <topic> cost in YYYY?" or "How long does <topic> take?"
+  Each of these 4 H2s MUST be followed IMMEDIATELY by a 50-word direct-answer paragraph
+  BEFORE expanding into the rest of the section.
+- These question-style H2s + their direct-answer paragraphs are what Google uses to populate
+  PAA boxes and AI Overview citations. This is non-negotiable for organic traffic.
+
 """
 
 
@@ -343,7 +360,7 @@ def generate_unique_topic(used_topics, existing_slugs, max_attempts=7):
     used_set = set(slugify(t) for t in used_topics[-200:]) | existing_slugs
     used_list = "\n".join(f"- {t}" for t in used_topics[-30:]) if used_topics else "(none yet)"
 
-    banned_keywords = _recent_keywords(used_topics, window=14, top_n=6)
+    banned_keywords = _recent_keywords(used_topics, window=7, top_n=4)  # v6 cluster 허용
     banned_str = ", ".join(banned_keywords) if banned_keywords else "(none yet)"
     forced_pattern = _forced_pattern_hint(used_topics, recent_n=5)
 
@@ -500,6 +517,15 @@ def _generate_post_content_inner(client, title, category, recent_titles):
                     "WORD COUNT IS A HARD REQUIREMENT — 2500 to 3500 words.\n"
                     "Articles under 2500 words trigger Google's thin-content filter and AdSense rejection. This is non-negotiable.\n"
                     "If you finish drafting and the total is under 2500 words, you MUST keep expanding before delivering: add another H2 with a fresh angle, deepen a personal story with concrete numbers, or add a 4th-5th item to your comparison table. Do not stop early. Do not add filler — add substance.\n\n"
+                    "v6 STRUCTURE INJECT (CRITICAL — do not skip):\n"
+                    "0a. BEFORE the hook intro, output ONE blockquote: > **Quick answer:** <40-60 words echoing the search query verbatim and giving the full one-paragraph answer with one specific number>. Then a blank line.\n"
+                    "0b. Among your 6-8 H2 sections, AT LEAST 4 MUST be phrased as actual user questions: \n"
+                    "   • \"How does <topic> work?\" or \"How can I <verb> <topic>?\"\n"
+                    "   • \"Is <topic> worth it in YYYY?\"\n"
+                    "   • \"What's the difference between A and B?\"\n"
+                    "   • \"How much does <topic> cost in YYYY?\" or \"How long does <topic> take?\"\n"
+                    "   Each of these 4 question H2s MUST be followed IMMEDIATELY by a 50-word direct-answer paragraph BEFORE the regular section body.\n"
+                    "   These trigger Google PAA + AI Overview citations.\n"
                     "Structure (follow ALL — partial structure = rejection):\n"
                     "1. First-person hook intro (3-5 sentences, use I/me/my; open with a specific dollar amount, month, or measurable mistake — never a generic intro)\n"
                     "2. ## How I Researched This — 3-4 sentence methodology callout (testing duration, comparison method, what bias you tried to avoid, what you would not have known without testing)\n"
@@ -539,27 +565,66 @@ def _generate_post_content_inner(client, title, category, recent_titles):
     content = response.choices[0].message.content
     content = _enforce_word_count(client, title, content)
     return content
+def _ensure_year_bracket(title, year=None):
+    """v6 (2026-05-08): 제목에 [YYYY Guide] / (Updated YYYY) 등 bracket 자동 append.
+    현 연도가 제목에 없으면 강제 추가. CTR +3.5% 케이스 보고.
+    """
+    import datetime as _dt
+    year = year or _dt.datetime.now().year
+    ys = str(year)
+    if ys in title:
+        return title
+    # 70자 이내면 ' [YYYY Guide]' append, 넘으면 그대로
+    candidate = title.rstrip() + f" [{ys} Guide]"
+    if len(candidate) <= 78:
+        return candidate
+    return title
+
+
 def generate_meta_description(title):
-    """Generate a unique, compelling meta description."""
+    """v6 (2026-05-08): CTR-optimized 메타 디스크립션.
+    145-155자, 메인 키워드 첫 60자 안, 숫자 1개 + benefit verb + 2026 freshness signal.
+    Google SERP에서 클릭 받기 위한 패턴.
+    """
     client = OpenAI()
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        max_tokens=100,
+        max_tokens=120,
         messages=[
             {
                 "role": "system",
                 "content": (
-                    "Write a compelling meta description for a blog post. "
-                    "150-160 characters max. Include the main keyword. "
-                    "Add a call-to-action. Reply with ONLY the description."
+                    "Write a CTR-optimized meta description for a blog post that ranks on Google. "
+                    "STRICT RULES (this is non-negotiable — meta descriptions are the #1 SERP CTR variable):
+"
+                    "1. Length: 145-155 characters (Google truncates at ~155).
+"
+                    "2. Main keyword from the title MUST appear in the FIRST 60 characters.
+"
+                    "3. Include ONE specific number (e.g., '7 ways', '$200/year', '12-min').
+"
+                    "4. Include ONE benefit verb (Save / Cut / Avoid / Skip / Get / Stop / Boost / Slash).
+"
+                    "5. Include ONE freshness signal: '2026', 'this year', 'right now', or 'updated'.
+"
+                    "6. End with an implicit promise or curiosity gap — never just a flat summary.
+"
+                    "7. NEVER use generic AI-meta phrases: 'Discover the secrets', 'Learn everything', "
+                    "'In this guide', 'Find out how', 'In our comprehensive guide'.
+"
+                    "Reply with ONLY the description, no quotes, no leading 'Meta:'."
                 ),
             },
-            {"role": "user", "content": f"Title: {title}"},
+            {"role": "user", "content": f"Blog post title: {title}
+
+Write the meta description now."},
         ],
     )
-    desc = response.choices[0].message.content.strip().strip('"')
+    desc = response.choices[0].message.content.strip().strip('"').strip("'")
+    # 강제 길이 제한
+    if len(desc) > 158:
+        desc = desc[:155].rsplit(" ", 1)[0] + "..."
     return desc[:160]
-
 
 def create_post():
     """Generate and save a new unique blog post."""
@@ -569,6 +634,7 @@ def create_post():
     recent_titles = [p["title"] for p in recent_posts]
 
     title, category, slug = generate_unique_topic(used_topics, existing_slugs)
+    title = _ensure_year_bracket(title)
     print(f"Generating post: {title}")
     print(f"Category: {category}")
 
@@ -627,3 +693,5 @@ if __name__ == "__main__":
 
 # v4_wordcount_patched
 # v5_diversity_patched 2026-05-06
+
+# v6_seo_patched 2026-05-08
