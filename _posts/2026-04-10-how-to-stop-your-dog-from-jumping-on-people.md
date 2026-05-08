@@ -6,6 +6,8 @@ categories: [training]
 description: "How to Stop Your Dog from Jumping on People - Expert pet care tips and advice."
 ---
 
+![How to Stop Your Dog from Jumping on People](/PetCarePro/assets/pin-images/2026-04-10-how-to-stop-your-dog-from-jumping-on-people.png)
+
 When it comes to dog training, one of the most common issues that pet owners face is their furry friends jumping on people. While it may seem like a harmless way for dogs to greet others, it can lead to unwanted situations, such as knocking someone over or making guests uncomfortable. Luckily, with a little patience and the right techniques, you can teach your dog to greet people politely. In this article, we’ll explore effective strategies to stop your dog from jumping on people, so you can enjoy calm and respectful interactions.
 
 ## Understanding Why Dogs Jump

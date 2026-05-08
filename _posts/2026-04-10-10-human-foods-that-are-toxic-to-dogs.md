@@ -6,6 +6,8 @@ categories: [dog-care]
 description: "10 Human Foods That Are Toxic to Dogs - Expert pet care tips and advice."
 ---
 
+![10 Human Foods That Are Toxic to Dogs](/PetCarePro/assets/pin-images/2026-04-10-10-human-foods-that-are-toxic-to-dogs.png)
+
 As a devoted dog parent, it’s natural to want to share your meals with your furry friend. However, many human foods can be toxic to dogs and even lead to serious health issues. In this article, we’ll go over ten common human foods that are harmful to your pets and how you can keep your dog safe.
 
 ## 1. Chocolate

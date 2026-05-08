@@ -7,6 +7,8 @@ description: "Discover the best portable pet carriers for air travel in 2026! En
 tags: [pet-travel, pet-care, 2026]
 ---
 
+![Best Portable Pet Carriers for Air Travel in 2026](/PetCarePro/assets/pin-images/2026-04-21-best-portable-pet-carriers-for-air-travel-in-2026.png)
+
 When it comes to air travel with pets, having the right portable pet carrier can make all the difference. A stressful experience can turn into a pleasant journey if your furry friend is safely housed in a comfortable and airline-approved carrier. I remember the first time I took my dog, Milo, on a flight to San Francisco. The carrier I chose cost me nearly $100 in June 2022, and I wondered if I'd made the right decision. Fortunately, it was a great investment; Milo was calm and cozy throughout the journey. In this blog post, I’ll share the best portable pet carriers for air travel in 2026, accumulated from my own experiences and extensive research.
 
 ## Choosing the Right Carrier for Air Travel
