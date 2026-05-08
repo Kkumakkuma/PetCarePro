@@ -19,9 +19,14 @@ permalink: /rss.xml
       <link>{{ post.url | absolute_url }}</link>
       <guid isPermaLink="true">{{ post.url | absolute_url }}</guid>
       {% assign first_image = post.content | split: '<img' | last | split: 'src="' | last | split: '"' | first %}
+      {% if first_image and first_image != post.content %}
       {% if first_image contains 'http' %}
-      <enclosure url="{{ first_image }}" type="image/jpeg" />
+      <enclosure url="{{ first_image }}" type="image/png" />
       <media:content url="{{ first_image }}" medium="image" />
+      {% else %}
+      <enclosure url="{{ first_image | absolute_url }}" type="image/png" />
+      <media:content url="{{ first_image | absolute_url }}" medium="image" />
+      {% endif %}
       {% endif %}
     </item>
     {% endfor %}
