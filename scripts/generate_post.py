@@ -582,10 +582,7 @@ def _ensure_year_bracket(title, year=None):
 
 
 def generate_meta_description(title):
-    """v6 (2026-05-08): CTR-optimized 메타 디스크립션.
-    145-155자, 메인 키워드 첫 60자 안, 숫자 1개 + benefit verb + 2026 freshness signal.
-    Google SERP에서 클릭 받기 위한 패턴.
-    """
+    """v6 hotfix (2026-05-08): CTR-optimized 메타 디스크립션."""
     client = OpenAI()
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -595,33 +592,22 @@ def generate_meta_description(title):
                 "role": "system",
                 "content": (
                     "Write a CTR-optimized meta description for a blog post that ranks on Google. "
-                    "STRICT RULES (this is non-negotiable — meta descriptions are the #1 SERP CTR variable):
-"
-                    "1. Length: 145-155 characters (Google truncates at ~155).
-"
-                    "2. Main keyword from the title MUST appear in the FIRST 60 characters.
-"
-                    "3. Include ONE specific number (e.g., '7 ways', '$200/year', '12-min').
-"
-                    "4. Include ONE benefit verb (Save / Cut / Avoid / Skip / Get / Stop / Boost / Slash).
-"
-                    "5. Include ONE freshness signal: '2026', 'this year', 'right now', or 'updated'.
-"
-                    "6. End with an implicit promise or curiosity gap — never just a flat summary.
-"
-                    "7. NEVER use generic AI-meta phrases: 'Discover the secrets', 'Learn everything', "
-                    "'In this guide', 'Find out how', 'In our comprehensive guide'.
-"
+                    "STRICT RULES (non-negotiable — meta descriptions are the #1 SERP CTR variable). "
+                    "1) Length: 145-155 characters (Google truncates at ~155). "
+                    "2) Main keyword from the title MUST appear in the FIRST 60 characters. "
+                    "3) Include ONE specific number (e.g., '7 ways', '$200/year', '12-min'). "
+                    "4) Include ONE benefit verb (Save / Cut / Avoid / Skip / Get / Stop / Boost / Slash). "
+                    "5) Include ONE freshness signal: '2026', 'this year', 'right now', or 'updated'. "
+                    "6) End with an implicit promise or curiosity gap, never just a flat summary. "
+                    "NEVER use generic AI-meta phrases: 'Discover the secrets', 'Learn everything', "
+                    "'In this guide', 'Find out how', 'In our comprehensive guide'. "
                     "Reply with ONLY the description, no quotes, no leading 'Meta:'."
                 ),
             },
-            {"role": "user", "content": f"Blog post title: {title}
-
-Write the meta description now."},
+            {"role": "user", "content": f"Blog post title: {title}. Write the meta description now."},
         ],
     )
     desc = response.choices[0].message.content.strip().strip('"').strip("'")
-    # 강제 길이 제한
     if len(desc) > 158:
         desc = desc[:155].rsplit(" ", 1)[0] + "..."
     return desc[:160]
