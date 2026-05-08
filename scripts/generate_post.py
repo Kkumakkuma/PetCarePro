@@ -628,6 +628,22 @@ def create_post():
     content = inject_internal_links(content, recent_posts, min_links=5, max_links=8)
     description = generate_meta_description(title)
 
+    # v7 (2026-05-08): 자동 핀 이미지 생성 + 본문 맨 위 markdown 이미지 삽입
+    try:
+        from generate_blog_pin import generate_pin as _gen_pin
+        _today = datetime.datetime.now()
+        _date_str = _today.strftime("%Y-%m-%d")
+        _pin_dir = os.path.join(get_repo_root(), "assets", "pin-images")
+        os.makedirs(_pin_dir, exist_ok=True)
+        _pin_filename = f"{_date_str}-{slug}.png"
+        _pin_path = os.path.join(_pin_dir, _pin_filename)
+        _gen_pin(title, BLOG_NAME, category, _pin_path)
+        _pin_url = f"/{BLOG_NAME}/assets/pin-images/{_pin_filename}"
+        content = f"![{title}]({_pin_url})\n\n" + content
+        print(f"  pin image: {_pin_path}")
+    except Exception as _e:
+        print(f"  [pin] failed (non-fatal): {_e}")
+
     today = datetime.datetime.now()
     date_str = today.strftime("%Y-%m-%d")
     posts_dir = os.path.join(get_repo_root(), "_posts")
@@ -681,3 +697,5 @@ if __name__ == "__main__":
 # v5_diversity_patched 2026-05-06
 
 # v6_seo_patched 2026-05-08
+
+# v7_pin_patched 2026-05-08
