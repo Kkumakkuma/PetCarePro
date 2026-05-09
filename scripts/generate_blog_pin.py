@@ -1,20 +1,22 @@
-"""영블용 자동 핀 이미지 생성 (Pillow, 1000x1500).
+"""영블용 자동 핀 이미지 생성 v2 (Pexels 사진 배경 + 다크 오버레이 + typography).
 
-영블 글 발행 시 generate_post.py 후처리에서 호출:
-  pin_path = generate_pin(title, category, slug, output_dir)
-
-또는 기존 600+ 글에 일괄 적용도 같은 함수 호출.
-
-각 영블의 niche별 컬러 팔레트 매핑됨. 105개 Gumroad 핀 만들 때 패턴 그대로 재활용.
+v1(2026-05-08): 단색 배경 + 텍스트만 → 시각적으로 심심함 (쿠마님 2026-05-09 지적)
+v2(2026-05-09): Pexels portrait 사진 배경 + 그라디언트 오버레이 + 카테고리 컬러 라벨
+              + 큰 제목 typography. fallback으로 단색 배경(사진 못 가져왔을 때).
 """
 import os
 import re
+import urllib.request
+import urllib.parse
+import io
+import random
+import hashlib
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 WIDTH, HEIGHT = 1000, 1500
+PEXELS_API_KEY = os.environ.get("PEXELS_API_KEY", "")
 
-# 이모지 제거 (Bahnschrift/Arial 폰트 못 그림)
 EMOJI_RE = re.compile(
     "["
     "\U0001F300-\U0001F5FF"
@@ -27,7 +29,6 @@ EMOJI_RE = re.compile(
     flags=re.UNICODE,
 )
 
-# Linux/Windows 폰트 경로 자동 폴백
 FONT_CANDIDATES = {
     "bold": [
         "C:/Windows/Fonts/arialbd.ttf",
@@ -49,21 +50,52 @@ def _font(kind: str, size: int):
     return ImageFont.load_default()
 
 
-# 영블 niche별 컬러 (105 Gumroad 핀과 같은 톤 — 시각 일관성)
+# 영블 niche별 컬러 + Pexels 검색 키워드
 BLOG_PALETTE = {
-    "SmartMoneyDaily":   {"bg": "#0f5132", "accent": "#16a34a", "label": "PERSONAL FINANCE"},
-    "HealthyLifeHub":    {"bg": "#0c4a6e", "accent": "#0891b2", "label": "HEALTH & WELLNESS"},
-    "FitnessDailyTips":  {"bg": "#1e3a8a", "accent": "#2563eb", "label": "FITNESS"},
-    "TechSimplified":    {"bg": "#4c1d95", "accent": "#7c3aed", "label": "TECH & DIGITAL"},
-    "CookingMadeEasy":   {"bg": "#7f1d1d", "accent": "#dc2626", "label": "COOKING & RECIPES"},
-    "HomeFixGuide":      {"bg": "#451a03", "accent": "#92400e", "label": "HOME & DIY"},
-    "ParentingSimple":   {"bg": "#831843", "accent": "#db2777", "label": "PARENTING"},
-    "PetCarePro":        {"bg": "#7c2d12", "accent": "#ea580c", "label": "PET CARE"},
-    "TravelBudgetPro":   {"bg": "#134e4a", "accent": "#0d9488", "label": "TRAVEL"},
-    "CarBuyingGuide":    {"bg": "#0f172a", "accent": "#475569", "label": "CAR & AUTO"},
+    "SmartMoneyDaily":   {"accent": "#16a34a", "label": "PERSONAL FINANCE",  "kw": "money saving cash budget"},
+    "HealthyLifeHub":    {"accent": "#0891b2", "label": "HEALTH & WELLNESS", "kw": "wellness healthy lifestyle"},
+    "FitnessDailyTips":  {"accent": "#2563eb", "label": "FITNESS",           "kw": "fitness workout gym"},
+    "TechSimplified":    {"accent": "#7c3aed", "label": "TECH & DIGITAL",    "kw": "technology gadget laptop"},
+    "CookingMadeEasy":   {"accent": "#dc2626", "label": "COOKING & RECIPES", "kw": "cooking food kitchen"},
+    "HomeFixGuide":      {"accent": "#d97706", "label": "HOME & DIY",        "kw": "home interior cozy"},
+    "ParentingSimple":   {"accent": "#db2777", "label": "PARENTING",         "kw": "family children kids"},
+    "PetCarePro":        {"accent": "#ea580c", "label": "PET CARE",          "kw": "dog cat pet"},
+    "TravelBudgetPro":   {"accent": "#0d9488", "label": "TRAVEL",            "kw": "travel destination scenic"},
+    "CarBuyingGuide":    {"accent": "#475569", "label": "CAR & AUTO",        "kw": "car automobile road"},
 }
 
-# 카테고리(소문자) → 라벨 매핑 (선택. 블로그 이름 우선)
+# 카테고리별 보강 키워드 (없으면 niche 기본만 사용)
+CATEGORY_KEYWORDS = {
+    "credit-score": "credit card",
+    "saving-money": "piggy bank coins",
+    "investing": "stock chart",
+    "side-hustle": "laptop work",
+    "passive-income": "money tree",
+    "retirement": "elderly couple",
+    "frugal-living": "thrift simple",
+    "budgeting": "calculator notebook",
+    "stress-management": "meditation calm",
+    "nutrition": "salad healthy",
+    "weight-loss": "fitness scale",
+    "yoga": "yoga pose",
+    "skincare": "skincare beauty",
+    "smartphones": "smartphone modern",
+    "ai-tools": "artificial intelligence",
+    "productivity": "desk workspace",
+    "recipes": "delicious dish",
+    "meal-prep": "meal prep containers",
+    "diy-repair": "tools workshop",
+    "interior": "modern interior",
+    "baby-care": "baby cute",
+    "education": "study books",
+    "dog-care": "happy dog",
+    "cat-care": "cute cat",
+    "vacation": "vacation beach",
+    "hostel": "backpack travel",
+    "ev": "electric car charging",
+    "used-car": "used car lot",
+}
+
 CATEGORY_LABEL = {
     "credit-score": "CREDIT TIPS",
     "saving-money": "SAVE MONEY",
@@ -72,22 +104,30 @@ CATEGORY_LABEL = {
     "passive-income": "PASSIVE INCOME",
     "retirement": "RETIREMENT",
     "frugal-living": "FRUGAL LIVING",
+    "budgeting": "BUDGETING",
+    "product-review": "REVIEW",
 }
 
-# 5가지 레이아웃 변형 (slug 해시로 고정 매핑 → 같은 글은 같은 레이아웃)
-LAYOUT_VARIANTS = [
-    {"top_pad": 110, "title_size": 86, "stripe": "top"},
-    {"top_pad": 80, "title_size": 96, "stripe": "left"},
-    {"top_pad": 140, "title_size": 78, "stripe": "bottom"},
-    {"top_pad": 100, "title_size": 88, "stripe": "right"},
-    {"top_pad": 90, "title_size": 92, "stripe": "diagonal"},
-]
+# 사진 못 가져왔을 때 단색 fallback 배경
+FALLBACK_BG = {
+    "SmartMoneyDaily":   "#0f5132",
+    "HealthyLifeHub":    "#0c4a6e",
+    "FitnessDailyTips":  "#1e3a8a",
+    "TechSimplified":    "#4c1d95",
+    "CookingMadeEasy":   "#7f1d1d",
+    "HomeFixGuide":      "#451a03",
+    "ParentingSimple":   "#831843",
+    "PetCarePro":        "#7c2d12",
+    "TravelBudgetPro":   "#134e4a",
+    "CarBuyingGuide":    "#0f172a",
+}
 
 
 def _clean_title(text: str) -> str:
     text = EMOJI_RE.sub("", text)
     text = re.sub(r"\s+", " ", text).strip()
-    text = text.replace("'", "'").replace("'", "'").replace(""", '"').replace(""", '"')
+    text = text.replace("’", "'").replace("‘", "'")
+    text = text.replace("“", '"').replace("”", '"')
     return text
 
 
@@ -109,84 +149,157 @@ def _wrap_title(text: str, font, max_width: int, draw) -> list:
     return lines
 
 
+def _fetch_pexels_photo(query: str, seed: str) -> Image.Image:
+    """Pexels 검색 → portrait 사진 1장 다운로드 → PIL Image 반환. 실패 시 None."""
+    if not PEXELS_API_KEY:
+        return None
+    try:
+        url = (
+            f"https://api.pexels.com/v1/search"
+            f"?query={urllib.parse.quote(query)}"
+            f"&orientation=portrait&size=large&per_page=15"
+        )
+        req = urllib.request.Request(
+            url,
+            headers={
+                "Authorization": PEXELS_API_KEY,
+                "User-Agent": "Mozilla/5.0 (compatible; AutoPinBot/1.0)",
+            },
+        )
+        resp = urllib.request.urlopen(req, timeout=20)
+        import json as _json
+        data = _json.loads(resp.read())
+        photos = data.get("photos", [])
+        if not photos:
+            return None
+        # seed로 고정 선택 (같은 글 = 같은 사진)
+        idx = int(hashlib.md5(seed.encode()).hexdigest(), 16) % len(photos)
+        photo_url = photos[idx]["src"].get("portrait") or photos[idx]["src"].get("large")
+        if not photo_url:
+            return None
+        img_req = urllib.request.Request(
+            photo_url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; AutoPinBot/1.0)"},
+        )
+        img_resp = urllib.request.urlopen(img_req, timeout=20)
+        img = Image.open(io.BytesIO(img_resp.read())).convert("RGB")
+        return img
+    except Exception as e:
+        print(f"  [pexels] fail: {e}")
+        return None
+
+
+def _make_background(blog_name: str, category: str, title: str) -> Image.Image:
+    """1000x1500 배경 이미지 생성. Pexels 사진 시도 → 실패 시 단색 fallback."""
+    pal = BLOG_PALETTE.get(blog_name, BLOG_PALETTE["SmartMoneyDaily"])
+    cat_kw = CATEGORY_KEYWORDS.get((category or "").lower(), "")
+    query = f"{cat_kw} {pal['kw']}".strip() if cat_kw else pal["kw"]
+
+    seed = title + blog_name
+    photo = _fetch_pexels_photo(query, seed)
+
+    if photo is not None:
+        # cover-style resize + center crop to 1000x1500
+        ratio = max(WIDTH / photo.width, HEIGHT / photo.height)
+        new_w, new_h = int(photo.width * ratio), int(photo.height * ratio)
+        photo = photo.resize((new_w, new_h), Image.LANCZOS)
+        left = (new_w - WIDTH) // 2
+        top = (new_h - HEIGHT) // 2
+        bg = photo.crop((left, top, left + WIDTH, top + HEIGHT))
+        # 살짝 블러로 텍스트 가독성
+        bg = bg.filter(ImageFilter.GaussianBlur(radius=1))
+        return bg
+
+    # fallback: 단색
+    return Image.new("RGB", (WIDTH, HEIGHT), FALLBACK_BG.get(blog_name, "#1f2937"))
+
+
+def _apply_overlay(img: Image.Image) -> Image.Image:
+    """배경 위 다크 그라디언트 오버레이 — 위→아래 점점 어두워짐. 텍스트 가독성 확보."""
+    overlay = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    # 위쪽: 30% 어둡게, 아래쪽: 75% 어둡게
+    for y in range(HEIGHT):
+        alpha = int(80 + (y / HEIGHT) * 130)  # 80 ~ 210
+        draw.rectangle([0, y, WIDTH, y + 1], fill=(0, 0, 0, alpha))
+    base = img.convert("RGBA")
+    out = Image.alpha_composite(base, overlay)
+    return out.convert("RGB")
+
+
 def generate_pin(title: str, blog_name: str, category: str, output_path: str) -> str:
-    """영블 글 → 1000x1500 핀 이미지 생성. output_path에 PNG 저장 후 같은 path 반환."""
+    """영블 글 → 1000x1500 핀 이미지 생성 (v2: Pexels 사진 배경)."""
     pal = BLOG_PALETTE.get(blog_name, BLOG_PALETTE["SmartMoneyDaily"])
     label = CATEGORY_LABEL.get((category or "").lower(), pal["label"])
 
-    # slug 해시로 레이아웃 고정 (같은 글 = 같은 디자인)
-    h = sum(ord(c) for c in (title + blog_name)) % len(LAYOUT_VARIANTS)
-    var = LAYOUT_VARIANTS[h]
-
-    img = Image.new("RGB", (WIDTH, HEIGHT), "#ffffff")
+    # 1. 배경 사진 + 오버레이
+    bg = _make_background(blog_name, category, title)
+    img = _apply_overlay(bg)
     draw = ImageDraw.Draw(img)
 
-    band_h = 280
-    draw.rectangle([0, 0, WIDTH, band_h], fill=pal["bg"])
-
-    if var["stripe"] == "top":
-        draw.rectangle([0, band_h, WIDTH, band_h + 12], fill=pal["accent"])
-    elif var["stripe"] == "left":
-        draw.rectangle([0, band_h, 18, HEIGHT - 200], fill=pal["accent"])
-    elif var["stripe"] == "right":
-        draw.rectangle([WIDTH - 18, band_h, WIDTH, HEIGHT - 200], fill=pal["accent"])
-    elif var["stripe"] == "bottom":
-        draw.rectangle([0, HEIGHT - 220, WIDTH, HEIGHT - 208], fill=pal["accent"])
-    else:
-        draw.polygon(
-            [(0, band_h), (220, band_h), (140, band_h + 90), (0, band_h + 90)],
-            fill=pal["accent"],
-        )
-
+    # 2. 상단 카테고리 라벨 박스 (accent 컬러)
     label_font = _font("bold", 32)
     bbox = draw.textbbox((0, 0), label, font=label_font)
-    lw = bbox[2] - bbox[0]
-    draw.text(((WIDTH - lw) // 2, 70), label, font=label_font, fill="#ffffff")
-
-    brand_mini_font = _font("regular", 24)
-    brand_mini = f"kkumakkuma.github.io / {blog_name}"
-    bbox = draw.textbbox((0, 0), brand_mini, font=brand_mini_font)
-    bmw = bbox[2] - bbox[0]
+    lw, lh = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    box_pad_x, box_pad_y = 28, 14
+    box_w = lw + box_pad_x * 2
+    box_h = lh + box_pad_y * 2
+    box_x = (WIDTH - box_w) // 2
+    box_y = 90
+    draw.rectangle(
+        [box_x, box_y, box_x + box_w, box_y + box_h],
+        fill=pal["accent"],
+    )
     draw.text(
-        ((WIDTH - bmw) // 2, 130),
-        brand_mini,
-        font=brand_mini_font,
-        fill="#cccccc",
+        (box_x + box_pad_x, box_y + box_pad_y - 4),
+        label,
+        font=label_font,
+        fill="#ffffff",
     )
 
-    # Title
+    # 3. 중앙~하단 큰 제목
     clean = _clean_title(title)
-    title_size = var["title_size"]
+    title_size = 88
     title_font = _font("bold", title_size)
-    max_w = WIDTH - 120
+    max_w = WIDTH - 100
     lines = _wrap_title(clean, title_font, max_w, draw)
-    # 줄 너무 많으면 폰트 축소
-    while len(lines) > 6 and title_size > 50:
+    while len(lines) > 6 and title_size > 56:
         title_size -= 6
         title_font = _font("bold", title_size)
         lines = _wrap_title(clean, title_font, max_w, draw)
 
-    line_h = title_size + 16
+    line_h = title_size + 14
     total_h = line_h * len(lines)
-    y0 = band_h + var["top_pad"]
+    y0 = HEIGHT - 290 - total_h  # 하단에서 위로 290px 띄워서 시작 (footer 위)
+    # 텍스트에 그림자 (가독성)
     for i, line in enumerate(lines):
         bbox = draw.textbbox((0, 0), line, font=title_font)
         lw = bbox[2] - bbox[0]
         x = (WIDTH - lw) // 2
-        draw.text((x, y0 + i * line_h), line, font=title_font, fill="#1a1a1a")
+        y = y0 + i * line_h
+        # 그림자
+        draw.text((x + 3, y + 3), line, font=title_font, fill=(0, 0, 0, 200))
+        # 본문
+        draw.text((x, y), line, font=title_font, fill="#ffffff")
 
-    # Footer brand bar
-    footer_h = 110
-    draw.rectangle([0, HEIGHT - footer_h, WIDTH, HEIGHT], fill=pal["bg"])
-    footer_font = _font("bold", 36)
-    footer_text = "kkumakkuma.github.io"
-    bbox = draw.textbbox((0, 0), footer_text, font=footer_font)
-    fw = bbox[2] - bbox[0]
+    # 4. accent 색 띠 (제목 위, 시각 강조)
+    bar_y = y0 - 30
+    bar_w = 80
+    draw.rectangle(
+        [(WIDTH - bar_w) // 2, bar_y, (WIDTH + bar_w) // 2, bar_y + 6],
+        fill=pal["accent"],
+    )
+
+    # 5. 하단 브랜드 푸터
+    brand_font = _font("regular", 28)
+    brand_text = f"kkumakkuma.github.io / {blog_name}"
+    bbox = draw.textbbox((0, 0), brand_text, font=brand_font)
+    bw = bbox[2] - bbox[0]
     draw.text(
-        ((WIDTH - fw) // 2, HEIGHT - footer_h + 32),
-        footer_text,
-        font=footer_font,
-        fill="#ffffff",
+        ((WIDTH - bw) // 2, HEIGHT - 70),
+        brand_text,
+        font=brand_font,
+        fill="#e5e7eb",
     )
 
     Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
@@ -195,11 +308,10 @@ def generate_pin(title: str, blog_name: str, category: str, output_path: str) ->
 
 
 if __name__ == "__main__":
-    # 테스트
     out = generate_pin(
         "How to Save Money Fast in 2026 — 7 Simple Steps That Actually Work",
         "SmartMoneyDaily",
         "saving-money",
-        "test_pin.png",
+        "test_pin_v2.png",
     )
-    print(f"테스트 핀 생성: {out}")
+    print(f"v2 테스트 핀 생성: {out}")
