@@ -46,8 +46,17 @@ jobs:
           git config user.name "PetCarePro Bot"
           git config user.email "bot@petcarepro.com"
           git add _posts/ scripts/used_topics.json scripts/used_promo_titles.json assets/pin-images/
-          git diff --staged --quiet || git commit -m "Auto-publish new article $(date +%Y-%m-%d-%H%M)"
-          git push
+          if git diff --staged --quiet; then
+            echo "no staged changes"
+            exit 0
+          fi
+          git commit -m "Auto-publish new article $(date +%Y-%m-%d-%H%M)"
+          for i in 1 2 3; do
+            if git push; then echo pushed; exit 0; fi
+            echo "push attempt $i failed; pulling --rebase"
+            git pull --rebase origin main || git pull --rebase --strategy-option=ours origin main || true
+          done
+          echo "push failed after retries"; exit 1
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
