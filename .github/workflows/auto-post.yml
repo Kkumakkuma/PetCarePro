@@ -119,3 +119,112 @@ jobs:
               print(f"IndexNow fail (non-fatal): {e}")
           PY
 
+      - name: Pinterest auto-pin (new posts)
+        if: success()
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, urllib.request, urllib.parse, urllib.error, base64, re
+          repo = os.environ.get("GITHUB_REPOSITORY","").split("/")[-1]
+          if not repo:
+              raise SystemExit(0)
+          since_iso = subprocess.check_output(
+              ["bash","-c","date -u -d '1 hour ago' +'%Y-%m-%dT%H:%M:%SZ'"]
+          ).decode().strip()
+          out = subprocess.check_output(
+              ["git","log","--since",since_iso,"--name-only","--pretty=format:","--diff-filter=A"]
+          ).decode()
+          new_posts = []
+          for line in out.split("\n"):
+              line = line.strip()
+              if line.startswith("_posts/") and line.endswith(".md"):
+                  new_posts.append(line)
+          if not new_posts:
+              print("Pinterest: no new posts in last hour")
+              raise SystemExit(0)
+          print(f"Pinterest: found {len(new_posts)} new post(s)")
+
+          # refresh_token으로 access_token 즉시 갱신
+          refresh = os.environ["PINTEREST_REFRESH_TOKEN"]
+          app_id = os.environ["PINTEREST_APP_ID"]
+          app_secret = os.environ["PINTEREST_APP_SECRET"]
+          board_id = os.environ["PINTEREST_BOARD_ID"]
+          creds = base64.b64encode(f"{app_id}:{app_secret}".encode()).decode()
+          body = urllib.parse.urlencode({
+              "grant_type": "refresh_token",
+              "refresh_token": refresh,
+          }).encode()
+          token_req = urllib.request.Request(
+              "https://api.pinterest.com/v5/oauth/token",
+              data=body,
+              headers={
+                  "Authorization": f"Basic {creds}",
+                  "Content-Type": "application/x-www-form-urlencoded",
+              },
+              method="POST",
+          )
+          try:
+              token_resp = urllib.request.urlopen(token_req, timeout=20)
+              tokens = json.loads(token_resp.read())
+              access = tokens["access_token"]
+              print(f"Pinterest: access_token refreshed (expires_in {tokens.get(\"expires_in\")}s)")
+          except urllib.error.HTTPError as e:
+              print(f"Pinterest token refresh FAIL HTTP {e.code}: {e.read().decode()[:300]}")
+              raise SystemExit(0)
+
+          # 각 새 글 마다 핀 업로드
+          for post_path in new_posts:
+              m = re.match(r"_posts/(\d{4})-(\d{2})-(\d{2})-(.+)\.md$", post_path)
+              if not m:
+                  continue
+              yyyy, mm, dd, slug = m.groups()
+              page_url = f"https://kkumakkuma.github.io/{repo}/{yyyy}/{mm}/{dd}/{slug}/"
+              pin_image = f"https://kkumakkuma.github.io/{repo}/assets/pin-images/{yyyy}-{mm}-{dd}-{slug}.png"
+              try:
+                  with open(post_path, encoding="utf-8") as f:
+                      content = f.read()
+              except Exception as e:
+                  print(f"  read {post_path} fail: {e}")
+                  continue
+              fm = re.search(r"---\n(.*?)\n---", content, re.DOTALL)
+              if fm:
+                  title_m = re.search(r'title:\s*"(.+?)"', fm.group(1))
+                  desc_m = re.search(r'description:\s*"(.+?)"', fm.group(1))
+                  title = title_m.group(1) if title_m else slug.replace("-"," ").title()
+                  description = desc_m.group(1) if desc_m else ""
+              else:
+                  title, description = slug.replace("-"," ").title(), ""
+              pin_body = {
+                  "board_id": board_id,
+                  "title": title[:100],
+                  "description": description[:500],
+                  "link": page_url,
+                  "media_source": {
+                      "source_type": "image_url",
+                      "url": pin_image,
+                  },
+              }
+              pin_req = urllib.request.Request(
+                  "https://api.pinterest.com/v5/pins",
+                  data=json.dumps(pin_body).encode(),
+                  headers={
+                      "Authorization": f"Bearer {access}",
+                      "Content-Type": "application/json",
+                  },
+                  method="POST",
+              )
+              try:
+                  pin_resp = urllib.request.urlopen(pin_req, timeout=30)
+                  pin_data = json.loads(pin_resp.read())
+                  print(f"  Pin OK: id={pin_data.get('id')} title={title[:60]}")
+              except urllib.error.HTTPError as e:
+                  print(f"  Pin FAIL ({title[:30]}): HTTP {e.code} {e.read().decode()[:300]}")
+              except Exception as e:
+                  print(f"  Pin FAIL ({title[:30]}): {e}")
+          PY
+        env:
+          PINTEREST_REFRESH_TOKEN: ${{ secrets.PINTEREST_REFRESH_TOKEN }}
+          PINTEREST_APP_ID: ${{ secrets.PINTEREST_APP_ID }}
+          PINTEREST_APP_SECRET: ${{ secrets.PINTEREST_APP_SECRET }}
+          PINTEREST_BOARD_ID: ${{ secrets.PINTEREST_BOARD_ID }}
+
