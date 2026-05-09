@@ -18,15 +18,34 @@ permalink: /rss.xml
       <pubDate>{{ post.date | date_to_rfc822 }}</pubDate>
       <link>{{ post.url | absolute_url }}</link>
       <guid isPermaLink="true">{{ post.url | absolute_url }}</guid>
-      {% assign first_image = post.content | split: '<img' | last | split: 'src="' | last | split: '"' | first %}
-      {% if first_image and first_image != post.content %}
-      {% if first_image contains 'http' %}
+      {% assign first_image = "" %}
+      {% if post.content contains "<img" %}
+        {% assign img_parts = post.content | split: "<img" %}
+        {% if img_parts.size > 1 %}
+          {% assign cand = img_parts[1] | split: 'src="' | last | split: '"' | first %}
+          {% if cand != post.content %}
+            {% assign first_image = cand %}
+          {% endif %}
+        {% endif %}
+      {% endif %}
+      {% if first_image == "" and post.content contains "![" %}
+        {% assign md_parts = post.content | split: "![" %}
+        {% if md_parts.size > 1 %}
+          {% assign cand = md_parts[1] | split: "](" | last | split: ")" | first %}
+          {% if cand != post.content %}
+            {% assign first_image = cand %}
+          {% endif %}
+        {% endif %}
+      {% endif %}
+      {% if first_image != "" %}
+        {% if first_image contains "http" %}
       <enclosure url="{{ first_image }}" type="image/png" />
       <media:content url="{{ first_image }}" medium="image" />
-      {% else %}
-      <enclosure url="{{ first_image | absolute_url }}" type="image/png" />
-      <media:content url="{{ first_image | absolute_url }}" medium="image" />
-      {% endif %}
+        {% elsif first_image contains "/assets/" %}
+          {% assign full_url = site.url | append: first_image %}
+      <enclosure url="{{ full_url }}" type="image/png" />
+      <media:content url="{{ full_url }}" medium="image" />
+        {% endif %}
       {% endif %}
     </item>
     {% endfor %}
