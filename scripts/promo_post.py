@@ -159,6 +159,22 @@ def create_promo_post():
         post_content = inject_internal_links(post_content, get_recent_posts_for_linking(10), min_links=3, max_links=3)
     except Exception as _e:
         print(f"[warn] inject_internal_links failed: {_e}")
+    # v7 (2026-05-09 hotfix): 자동 핀 이미지 생성 + 본문 맨 위 markdown 이미지 삽입
+    try:
+        from generate_blog_pin import generate_pin as _gen_pin
+        _today_pin = datetime.datetime.now()
+        _date_str_pin = _today_pin.strftime("%Y-%m-%d")
+        _slug_pin = slugify(title)
+        _pin_dir = os.path.join(get_repo_root(), "assets", "pin-images")
+        os.makedirs(_pin_dir, exist_ok=True)
+        _pin_filename = f"{_date_str_pin}-{_slug_pin}.png"
+        _pin_path = os.path.join(_pin_dir, _pin_filename)
+        _gen_pin(title, BLOG_NAME, "product-review", _pin_path)
+        _pin_url = f"/{BLOG_NAME}/assets/pin-images/{_pin_filename}"
+        post_content = f"![{title}]({_pin_url})\n\n" + post_content
+        print(f"  pin image: {_pin_path}")
+    except Exception as _e:
+        print(f"  [pin] failed (non-fatal): {_e}")
     today = datetime.datetime.now()
     date_str = today.strftime("%Y-%m-%d")
     slug = slugify(title)
