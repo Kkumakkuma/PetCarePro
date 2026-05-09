@@ -39,6 +39,7 @@ jobs:
           command: python scripts/generate_post.py
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       - name: Commit new post
         run: |
           git config user.name "PetCarePro Bot"
