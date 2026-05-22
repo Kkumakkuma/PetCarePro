@@ -7,6 +7,7 @@
   <meta name="description" content="{{ page.description | default: site.description }}">
   <link rel="canonical" href="{{ page.url | absolute_url }}">
   {% seo %}
+  {% if page.noindex %}<meta name="robots" content="noindex, nofollow">{% endif %}
   {% feed_meta %}
   <meta property="og:type" content="{% if page.layout == 'post' %}article{% else %}website{% endif %}">
   <meta property="og:url" content="{{ page.url | absolute_url }}">

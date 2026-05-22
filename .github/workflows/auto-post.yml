@@ -1,8 +1,7 @@
 name: Auto Generate Blog Post
 
 on:
-  schedule:
-    - cron: '41 1/6 * * *'
+  # cron_disabled_v8 (AdSense re-review — manual dispatch only)
   workflow_dispatch:
 
 permissions:
