@@ -1,9 +1,14 @@
 """
-영어 블로그 10개 일일 점검 → 텔레그램 알림.
+영어 블로그 일일 점검 → 텔레그램 알림.
 GitHub Actions cron으로 매일 1회 실행 (UTC 기준 cron 지연 무관).
 
+2026-05-23 v8 단일 블로그 전략: SmartMoneyDaily 1개만 활성(하루 1회 발행).
+나머지 9개 블로그는 AdSense 재심사 위해 글 전부 _drafts 로 이동 + cron 제거되어
+발행 중단 상태(=GitHub _posts 디렉토리 자체가 없어 404). 따라서 모니터 대상에서
+제외한다. 각 블로그를 정예화해 부활시키면 ACTIVE_BLOGS 에 다시 추가할 것.
+
 윈도우: 실행 시각 기준 최근 24시간 자동발행 커밋 카운트.
-auto-post.yml이 4시간 cron이므로 정상이면 블로그당 4~6건/일.
+SmartMoneyDaily auto-post.yml 이 하루 1회 cron 이므로 정상이면 1건/일.
 
 env:
   TELEGRAM_BOT_TOKEN — Telegram bot token
@@ -17,11 +22,17 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 
 GH_USER = "Kkumakkuma"
-BLOGS = [
+
+# v8 단일 블로그 집중 전략 (2026-05-23): SmartMoneyDaily 만 활성 발행.
+# PAUSED_BLOGS 9개는 _drafts 이동 + auto-post cron 제거됨 → 점검하면 404 만 남.
+# 정예화 거쳐 부활시킬 때 해당 블로그를 ACTIVE_BLOGS 로 옮긴다.
+ACTIVE_BLOGS = ["SmartMoneyDaily"]
+PAUSED_BLOGS = [
     "CarBuyingGuide", "CookingMadeEasy", "FitnessDailyTips", "HealthyLifeHub",
-    "HomeFixGuide", "ParentingSimple", "PetCarePro", "SmartMoneyDaily",
+    "HomeFixGuide", "ParentingSimple", "PetCarePro",
     "TechSimplified", "TravelBudgetPro",
 ]
+BLOGS = ACTIVE_BLOGS
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
@@ -109,7 +120,7 @@ def main():
 
     problems = []
     summary_ok = []
-    low_volume = []  # 24h 발행 0~1건 블로그 (cron 1회/4h이므로 정상은 4~6건)
+    low_volume = []  # 24h 발행 0건 블로그 (SmartMoneyDaily 는 하루 1회 cron 이 정상)
     for r in results:
         if r["duplicates"]:
             problems.append(
@@ -117,7 +128,7 @@ def main():
             )
         else:
             summary_ok.append(f"{r['blog']}({r['recent']})")
-        if r["recent"] <= 1:
+        if r["recent"] < 1:
             low_volume.append(f"{r['blog']}({r['recent']}건)")
 
     recent_total = sum(r["recent"] for r in results)
@@ -128,14 +139,14 @@ def main():
         if problems:
             msg += "\n".join(problems) + "\n\n"
         if low_volume:
-            msg += f"⚠ 24h 발행 부족 (1건 이하): {', '.join(low_volume)}\n\n"
+            msg += f"⚠ 24h 발행 0건: {', '.join(low_volume)}\n\n"
         if errors:
             msg += "에러:\n" + "\n".join(errors) + "\n\n"
         if summary_ok:
             msg += f"나머지 정상: {', '.join(summary_ok)}"
     else:
         msg = (
-            f"✅ 블로그 10개 정상 · 중복 0\n"
+            f"✅ 블로그 {len(BLOGS)}개 정상 · 중복 0\n"
             f"{header}\n"
             + "\n".join(f"- {r['blog']}: {r['recent']}건" for r in results)
         )
