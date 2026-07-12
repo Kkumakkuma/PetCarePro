@@ -34,6 +34,6 @@ I try to follow three rules on this site:
 
 Questions, corrections, feedback, or collaboration ideas are welcome.
 
-**Email:** [kkumaspark@gmail.com](mailto:kkumaspark@gmail.com)
+**Email:** [200kgBrothers@gmail.com](mailto:200kgBrothers@gmail.com)
 
 For privacy, legal, and data practices, please see the [Privacy Policy](/privacy-policy/), [Terms](/terms/), and [Disclaimer](/disclaimer/).

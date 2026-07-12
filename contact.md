@@ -11,7 +11,7 @@ I read every email. Response time is usually within a few business days — some
 
 ## For general questions, corrections, or feedback
 
-**Email:** [kkumaspark@gmail.com](mailto:kkumaspark@gmail.com)
+**Email:** [200kgBrothers@gmail.com](mailto:200kgBrothers@gmail.com)
 
 Please include a short subject line that tells me what the message is about (e.g., "Correction on credit score post", "Question about meal prep").
 
@@ -37,5 +37,5 @@ For privacy and data handling, see the [Privacy Policy](/privacy-policy/).
 
 ---
 
-**Email:** [kkumaspark@gmail.com](mailto:kkumaspark@gmail.com)
+**Email:** [200kgBrothers@gmail.com](mailto:200kgBrothers@gmail.com)
 **Location:** Seoul, South Korea

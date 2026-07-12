@@ -58,4 +58,4 @@ These Terms are governed by the laws of the Republic of Korea, without regard to
 
 ## 9. Contact
 
-Email: [kkumaspark@gmail.com](mailto:kkumaspark@gmail.com).
+Email: [200kgBrothers@gmail.com](mailto:200kgBrothers@gmail.com).

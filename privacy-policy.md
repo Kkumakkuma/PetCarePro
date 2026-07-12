@@ -19,7 +19,7 @@ We collect only the information necessary to operate the Site:
 
 - **Log data** (IP address, browser type, pages visited, time on page) — automatically collected by our hosting provider (GitHub Pages) and analytics tools.
 - **Analytics data** — anonymized usage statistics via Google Analytics.
-- **Contact information** — only if you voluntarily email us at [kkumaspark@gmail.com](mailto:kkumaspark@gmail.com).
+- **Contact information** — only if you voluntarily email us at [200kgBrothers@gmail.com](mailto:200kgBrothers@gmail.com).
 
 We do **not** collect names, phone numbers, payment details, or sensitive personal data directly on this Site.
 
@@ -60,7 +60,7 @@ Depending on where you live, you may have the right to:
 - Opt out of personalized advertising.
 - File a complaint with a data protection authority.
 
-To exercise any of these rights, contact us at [kkumaspark@gmail.com](mailto:kkumaspark@gmail.com).
+To exercise any of these rights, contact us at [200kgBrothers@gmail.com](mailto:200kgBrothers@gmail.com).
 
 ## 7. Children's privacy
 
@@ -76,4 +76,4 @@ We may update this Privacy Policy from time to time. The "Last updated" date at 
 
 ## 10. Contact
 
-Questions about this Privacy Policy? Email [kkumaspark@gmail.com](mailto:kkumaspark@gmail.com).
+Questions about this Privacy Policy? Email [200kgBrothers@gmail.com](mailto:200kgBrothers@gmail.com).
