@@ -92,7 +92,7 @@ def check_blog(blog: str, since_iso: str) -> dict:
     # 자동발행 커밋만 카운트 ("Auto-publish new article|recipe ..." 형식)
     recent = sum(
         1 for c in commits
-        if c.get("commit", {}).get("message", "").startswith("Auto-publish new")
+        if c.get("commit", {}).get("message", "").startswith(("Auto-publish new", "Add post:"))
     )
     return {
         "blog": blog,
