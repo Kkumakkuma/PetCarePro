@@ -3,6 +3,8 @@ layout: default
 title: "Privacy Policy"
 permalink: /privacy-policy/
 description: "How PetCarePro handles your information, cookies, and third-party services."
+noindex: true
+sitemap: false
 ---
 
 # Privacy Policy

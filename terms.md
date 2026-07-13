@@ -3,6 +3,8 @@ layout: default
 title: "Terms of Service"
 permalink: /terms/
 description: "The terms under which you may use PetCarePro."
+noindex: true
+sitemap: false
 ---
 
 # Terms of Service

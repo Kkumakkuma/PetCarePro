@@ -7,7 +7,7 @@
   <meta name="description" content="{{ page.description | default: site.description }}">
   <link rel="canonical" href="{{ page.url | absolute_url }}">
   {% seo %}
-  {% if page.noindex %}<meta name="robots" content="noindex, nofollow">{% endif %}
+  <meta name="robots" content="noindex, nofollow">
   {% feed_meta %}
   <meta property="og:type" content="{% if page.layout == 'post' %}article{% else %}website{% endif %}">
   <meta property="og:url" content="{{ page.url | absolute_url }}">
@@ -18,7 +18,6 @@
   <meta name="twitter:title" content="{{ page.title | default: site.title }}">
   <meta name="twitter:description" content="{{ page.description | default: site.description }}">
     <meta name="p:domain_verify" content="98dd0c410ee9b74231e0bb466b52dd1a"/>
-  <meta name="google-adsense-account" content="ca-pub-5723595008598292">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.75; color: #222; background: #fdfdfd; }
@@ -90,8 +89,6 @@
     gtag('js', new Date());
     gtag('config', 'G-5L40K3SBQT');
   </script>
-  <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5723595008598292" crossorigin="anonymous"></script>
 </head>
 <body>
   <header>
@@ -107,7 +104,6 @@
         <a href="{{ '/privacy-policy/' | relative_url }}">Privacy</a>
         <a href="{{ '/disclaimer/' | relative_url }}">Disclaimer</a>
         <a href="{{ '/terms/' | relative_url }}">Terms</a>
-        <a href="/" style="margin-left:auto; font-weight:600; color:#fff;">&uarr; All Blogs</a>
       </nav>
     </div>
   </header>
@@ -118,22 +114,6 @@
   </main>
   <footer>
     <div class="container">
-      <div class="other-blogs">
-        <p class="other-blogs-title">Explore my other blogs</p>
-        <div class="other-blogs-grid">
-          <a href="/SmartMoneyDaily/">SmartMoneyDaily &mdash; Finance</a>
-          <a href="/HealthyLifeHub/">HealthyLifeHub &mdash; Health</a>
-          <a href="/FitnessDailyTips/">FitnessDailyTips &mdash; Fitness</a>
-          <a href="/TechSimplified/">TechSimplified &mdash; Tech</a>
-          <a href="/CookingMadeEasy/">CookingMadeEasy &mdash; Cooking</a>
-          <a href="/HomeFixGuide/">HomeFixGuide &mdash; DIY Home</a>
-          <a href="/ParentingSimple/">ParentingSimple &mdash; Parenting</a>
-          <a href="/PetCarePro/">PetCarePro &mdash; Pets</a>
-          <a href="/TravelBudgetPro/">TravelBudgetPro &mdash; Travel</a>
-          <a href="/CarBuyingGuide/">CarBuyingGuide &mdash; Cars</a>
-        </div>
-        <p class="hub-link"><a href="/">&uarr; Return to main hub</a></p>
-      </div>
       <p>&copy; {{ 'now' | date: '%Y' }} {{ site.title }}. Written by Kkuma Park. All rights reserved.</p>
       <nav>
         <a href="{{ '/about/' | relative_url }}">About</a>
