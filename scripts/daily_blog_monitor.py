@@ -145,11 +145,15 @@ def main():
         if summary_ok:
             msg += f"나머지 정상: {', '.join(summary_ok)}"
     else:
+        # 정상이면 발송하지 않는다 — 아침·저녁 통합 브리핑으로 대체 (2026-07-27 쿠마님 지시).
         msg = (
             f"✅ 블로그 {len(BLOGS)}개 정상 · 중복 0\n"
             f"{header}\n"
             + "\n".join(f"- {r['blog']}: {r['recent']}건" for r in results)
         )
+        print(msg)
+        print("[정상 — 텔레그램 발송 생략]")
+        return
 
     print(msg)
     send_telegram(msg)
