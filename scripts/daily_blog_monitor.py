@@ -21,12 +21,12 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
-GH_USER = "Kkumakkuma"
+GH_USER = "smartmoneydaily"  # SMD 조직 이전(2026-08-02). 일시정지 9개 블로그는 여전히 Kkumakkuma 소유 - 부활 시 소유자 분기 필요
 
 # v8 단일 블로그 집중 전략 (2026-05-23): SmartMoneyDaily 만 활성 발행.
 # PAUSED_BLOGS 9개는 _drafts 이동 + auto-post cron 제거됨 → 점검하면 404 만 남.
 # 정예화 거쳐 부활시킬 때 해당 블로그를 ACTIVE_BLOGS 로 옮긴다.
-ACTIVE_BLOGS = ["SmartMoneyDaily"]
+ACTIVE_BLOGS = ["smartmoneydaily.github.io"]
 PAUSED_BLOGS = [
     "CarBuyingGuide", "CookingMadeEasy", "FitnessDailyTips", "HealthyLifeHub",
     "HomeFixGuide", "ParentingSimple", "PetCarePro",
