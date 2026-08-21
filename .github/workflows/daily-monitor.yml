@@ -1,10 +1,11 @@
 name: Daily Blog Monitor
 
-# 영어 블로그 10개 일일 점검 → 텔레그램 알림.
-# UTC 23:50 (KST 익일 08:50) — UTC 00~24시 하루 발행 완료 직후에 총량 집계.
+# 2026-08-21 cron 폐지. 쿠마님 지시(2026-07-27) — 알림은 아침 10시·저녁 22시
+# 통합 브리핑 한 통으로만 받는다. 매일 KST 08:50 에 따로 오던 이 알림은 그 지시 위반이었고,
+# 판정 기준까지 낡아 매일 "24h 발행 0건" 오탐을 보내고 있었다.
+# 블로그 점검 신호는 EC2 briefing.service 가 브리핑 안에 실어 보낸다.
+# 이 워크플로는 자세히 들여다볼 때 손으로 돌리는 용도로만 남긴다.
 on:
-  schedule:
-    - cron: '50 23 * * *'
   workflow_dispatch:
 
 permissions:
@@ -24,7 +25,5 @@ jobs:
 
       - name: Run monitor
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python scripts/daily_blog_monitor.py

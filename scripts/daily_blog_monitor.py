@@ -1,25 +1,32 @@
 """
-영어 블로그 일일 점검 → 텔레그램 알림.
-GitHub Actions cron으로 매일 1회 실행 (UTC 기준 cron 지연 무관).
+영어 블로그 점검 (수동 진단용). **텔레그램으로 직접 발송하지 않는다.**
+
+2026-08-21 쿠마님 지시로 이 스크립트의 cron 발송을 폐지했다.
+알림은 아침 10시·저녁 22시 통합 브리핑 한 통으로만 받는다(2026-07-27 지시).
+블로그 점검 신호는 EC2 briefing.service 가 매일 두 번 실어 보낸다.
+이 파일은 workflow_dispatch 로 수동 실행해 자세히 들여다볼 때만 쓴다.
 
 2026-05-23 v8 단일 블로그 전략: SmartMoneyDaily 1개만 활성(하루 1회 발행).
 나머지 9개 블로그는 AdSense 재심사 위해 글 전부 _drafts 로 이동 + cron 제거되어
 발행 중단 상태(=GitHub _posts 디렉토리 자체가 없어 404). 따라서 모니터 대상에서
 제외한다. 각 블로그를 정예화해 부활시키면 ACTIVE_BLOGS 에 다시 추가할 것.
 
-윈도우: 실행 시각 기준 최근 24시간 자동발행 커밋 카운트.
-SmartMoneyDaily auto-post.yml 이 하루 1회 cron 이므로 정상이면 1건/일.
-
-env:
-  TELEGRAM_BOT_TOKEN — Telegram bot token
-  TELEGRAM_CHAT_ID   — 알림 받을 chat id
+판정 기준 (2026-08-21 교체):
+  기존에는 "최근 24h 자동발행 커밋" 개수로 발행량을 셌다. 커밋 메시지가
+  "Auto-publish new" / "Add post:" 로 시작하는 것만 셌는데, 2026-08-19 쿠마님 지시로
+  GPT 자동 집필을 중단하고 직접 집필 체제로 바꾸면서 커밋 메시지 형식이 달라졌다
+  ("Add scheduled post for ...", "Rewrite ..."). 그래서 실제로는 매일 글이 올라가는데도
+  매일 "24h 발행 0건" 오탐 경고가 나갔다(8/20 창에 커밋 2건이 있었으나 0건으로 집계).
+  커밋 메시지에 의존하는 방식을 버리고, _posts 파일명 날짜만 본다.
+    - 오늘(UTC) 날짜 글이 있는가        → 없으면 발행 끊김
+    - 오늘 이후 예약 재고가 며칠치인가  → 3일 미만이면 보충 필요
+  같은 블로그를 경고와 정상 목록에 동시에 넣던 자기모순도 함께 제거했다.
 """
 import json
 import os
 import re
-import urllib.parse
 import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 GH_USER = "smartmoneydaily"  # SMD 조직 이전(2026-08-02). 일시정지 9개 블로그는 여전히 Kkumakkuma 소유 - 부활 시 소유자 분기 필요
 
@@ -34,19 +41,8 @@ PAUSED_BLOGS = [
 ]
 BLOGS = ACTIVE_BLOGS
 
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
-
-
-def send_telegram(text: str) -> None:
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("Telegram secrets missing — skip"); print(text); return
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    data = urllib.parse.urlencode({"chat_id": TELEGRAM_CHAT_ID, "text": text}).encode()
-    try:
-        urllib.request.urlopen(url, data, timeout=15)
-    except Exception as e:
-        print(f"Telegram send failed: {e}")
+# 예약 재고가 이 일수 밑으로 떨어지면 보충 대상 (쿠마님 기준: 항상 3일치 유지)
+MIN_BACKLOG_DAYS = 3
 
 
 def list_posts(blog: str) -> list[str]:
@@ -62,22 +58,11 @@ def list_posts(blog: str) -> list[str]:
     return [it["name"] for it in items if isinstance(it, dict) and it.get("name", "").endswith(".md")]
 
 
-def list_recent_commits(blog: str, since_iso: str) -> list[dict]:
-    """GitHub API로 since 시각 이후 main 커밋 목록 (자동발행 커밋만 카운트)."""
-    url = (
-        f"https://api.github.com/repos/{GH_USER}/{blog}/commits"
-        f"?sha=main&since={since_iso}&per_page=100"
-    )
-    req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json"})
-    gh_token = os.environ.get("GITHUB_TOKEN")
-    if gh_token:
-        req.add_header("Authorization", f"Bearer {gh_token}")
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.load(r)
+def check_blog(blog: str, today: str) -> dict:
+    """_posts 파일명만으로 중복 검사 + 오늘 글 존재 여부 + 예약 재고 일수 산출.
 
-
-def check_blog(blog: str, since_iso: str) -> dict:
-    """전체 _posts 스캔으로 중복 검사 + 최근 24h 자동발행 커밋 카운트로 발행량 산출."""
+    today: 'YYYY-MM-DD' (UTC). 파일명 날짜와 문자열 비교하므로 타임존 변환이 없다.
+    """
     files = list_posts(blog)
     slug_count: dict[str, int] = {}
     for f in files:
@@ -88,75 +73,54 @@ def check_blog(blog: str, since_iso: str) -> dict:
         slug_count[slug] = slug_count.get(slug, 0) + 1
     dup = {s: c for s, c in slug_count.items() if c > 1}
 
-    commits = list_recent_commits(blog, since_iso)
-    # 자동발행 커밋만 카운트 ("Auto-publish new article|recipe ..." 형식)
-    recent = sum(
-        1 for c in commits
-        if c.get("commit", {}).get("message", "").startswith(("Auto-publish new", "Add post:"))
-    )
+    # 파일명 날짜만으로 판정한다 — 커밋 메시지 형식에 의존하지 않는다.
+    dates = sorted({
+        m.group(1) for m in (re.match(r"^(\d{4}-\d{2}-\d{2})-", f) for f in files) if m
+    })
+
     return {
         "blog": blog,
         "total": len(files),
-        "recent": recent,
+        "has_today": today in dates,
+        "backlog": len([d for d in dates if d > today]),
+        "last_date": dates[-1] if dates else "-",
         "duplicates": dup,
     }
 
 
-def main():
-    # 최근 24시간 윈도우 (cron 지연/실행시각 무관하게 안정)
-    now_utc = datetime.now(timezone.utc)
-    since_dt = now_utc - timedelta(hours=24)
-    since_iso = since_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-    now_str = now_utc.strftime("%Y-%m-%d %H:%M")
-    since_str = since_dt.strftime("%Y-%m-%d %H:%M")
+def issues_for(r: dict, today: str) -> list[str]:
+    """블로그 한 곳의 문제 목록. 비어 있으면 정상."""
+    out = []
+    if r["duplicates"]:
+        out.append(f"중복 {len(r['duplicates'])}건 {list(r['duplicates'].keys())[:2]}")
+    if not r["has_today"]:
+        out.append(f"오늘({today}) 글 없음, 마지막 {r['last_date']}")
+    if r["backlog"] < MIN_BACKLOG_DAYS:
+        out.append(f"예약 재고 {r['backlog']}일치 (기준 {MIN_BACKLOG_DAYS}일)")
+    return out
 
-    results = []
-    errors = []
+
+def main():
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    print(f"블로그 점검 (UTC {today}) - 대상 {len(BLOGS)}개")
+
+    bad = 0
     for b in BLOGS:
         try:
-            results.append(check_blog(b, since_iso))
+            r = check_blog(b, today)
         except Exception as e:
-            errors.append(f"{b}: {e}")
-
-    problems = []
-    summary_ok = []
-    low_volume = []  # 24h 발행 0건 블로그 (SmartMoneyDaily 는 하루 1회 cron 이 정상)
-    for r in results:
-        if r["duplicates"]:
-            problems.append(
-                f"⚠ {r['blog']}: 중복 {len(r['duplicates'])}건 → {list(r['duplicates'].keys())[:2]}"
-            )
-        else:
-            summary_ok.append(f"{r['blog']}({r['recent']})")
-        if r["recent"] < 1:
-            low_volume.append(f"{r['blog']}({r['recent']}건)")
-
-    recent_total = sum(r["recent"] for r in results)
-    header = f"최근 24h (UTC {since_str} ~ {now_str}) 자동발행: {recent_total}건"
-
-    if problems or errors or low_volume:
-        msg = f"📊 블로그 점검\n{header}\n\n"
+            print(f"  [에러] {b}: {e}")
+            bad += 1
+            continue
+        problems = issues_for(r, today)
         if problems:
-            msg += "\n".join(problems) + "\n\n"
-        if low_volume:
-            msg += f"⚠ 24h 발행 0건: {', '.join(low_volume)}\n\n"
-        if errors:
-            msg += "에러:\n" + "\n".join(errors) + "\n\n"
-        if summary_ok:
-            msg += f"나머지 정상: {', '.join(summary_ok)}"
-    else:
-        # 정상이면 발송하지 않는다 — 아침·저녁 통합 브리핑으로 대체 (2026-07-27 쿠마님 지시).
-        msg = (
-            f"✅ 블로그 {len(BLOGS)}개 정상 · 중복 0\n"
-            f"{header}\n"
-            + "\n".join(f"- {r['blog']}: {r['recent']}건" for r in results)
-        )
-        print(msg)
-        print("[정상 — 텔레그램 발송 생략]")
-        return
+            bad += 1
+            print(f"  [문제] {b}: " + " / ".join(problems))
+        else:
+            print(f"  [정상] {b}: 오늘 글 있음, 예약 재고 {r['backlog']}일치, 전체 {r['total']}편")
 
-    print(msg)
-    send_telegram(msg)
+    print(f"문제 {bad}건")
+    print("[텔레그램 발송 없음 - 알림은 아침/저녁 통합 브리핑 한 통으로만]")
 
 
 if __name__ == "__main__":
